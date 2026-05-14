@@ -12,8 +12,8 @@ from typing import Any
 import torch
 
 import vllm.envs as envs
-from vllm.logger import init_logger
 from vllm.platforms import current_platform
+from vllm.platforms.rocm import on_gfx906
 from vllm.triton_utils import tl, triton
 from vllm.v1.attention.ops.triton_attention_helpers import (
     apply_alibi_to_score,
@@ -30,7 +30,6 @@ from vllm.v1.attention.ops.triton_attention_helpers import (
 )
 from vllm.v1.kv_cache_interface import KVQuantMode
 
-logger = init_logger(__name__)
 is_batch_invariant = envs.VLLM_BATCH_INVARIANT
 float8_info = torch.finfo(current_platform.fp8_dtype())
 
@@ -54,10 +53,6 @@ def _cast_kv_tile(data, Q, tensor_scale, KV_QUANT_MODE: tl.constexpr):
     return data.to(Q.dtype)
 
 
-@triton.autotune(
-    configs=[triton.Config({}, num_stages=1, num_warps=2)],
-    key=[]
-)
 @triton.jit
 def kernel_unified_attention(
     # Output destinations.  In 2D mode we write the final result into
@@ -676,12 +671,24 @@ def unified_attention(
             while tile > max_tile_shared and tile > abs_min_tile_size:
                 tile //= 2
         if shared_mem_limit and shared_mem_limit > 0:
-            while tile > abs_min_tile_size and _estimate_shared(tile) > shared_mem_limit:
+            while (tile > abs_min_tile_size
+                   and _estimate_shared(tile) > shared_mem_limit):
                 tile //= 2
         return max(tile, abs_min_tile_size)
 
     TILE_SIZE_PREFILL = _final_tile(preferred_prefill)
     TILE_SIZE_DECODE = _final_tile(preferred_decode)
+    launch_kwargs: dict[str, int] = {}
+    if on_gfx906():
+        # MI50/MI60 (gfx906): locally tuned for head_dim=256 fp16 paged
+        # attention.  Keep fp8 at its required minimum tile size.
+        TILE_SIZE_PREFILL = max(min_tile_size, 16)
+        TILE_SIZE_DECODE = max(min_tile_size, 16)
+        launch_kwargs = {
+            "num_warps": 4,
+            "num_stages": 1,
+            "waves_per_eu": 1,
+        }
 
     # Launch the 2D kernel if
     # 1. No intermediate tiled softmax buffers for the 3D kernel have been allocated, or
@@ -730,7 +737,7 @@ def unified_attention(
         grid = (total_num_q_blocks, num_kv_heads)
         tile_size = TILE_SIZE_PREFILL
     else:
-        grid = (total_num_q_blocks, num_kv_heads, num_par_softmax_segments)
+        grid = (total_num_q_blocks, num_kv_heads, num_segments)
         tile_size = TILE_SIZE_DECODE
 
     kernel_unified_attention[grid](
@@ -798,6 +805,7 @@ def unified_attention(
         KV_QUANT_MODE=kv_quant_mode,
         CHUNK_LOOKBACK=chunk_lookback,
         CHUNK_SIZE=chunk_size,
+        **launch_kwargs,
     )
 
     if use_3d:
@@ -818,6 +826,7 @@ def unified_attention(
             HEAD_SIZE_PADDED=triton.next_power_of_2(head_size),
             query_start_len_ptr=cu_seqlens_q,
             BLOCK_Q=BLOCK_Q,
-            NUM_SEGMENTS_PER_SEQ=num_par_softmax_segments,
+            NUM_SEGMENTS_PER_SEQ=num_segments,
             USE_FP8=output_scale is not None,
+            **launch_kwargs,
         )
