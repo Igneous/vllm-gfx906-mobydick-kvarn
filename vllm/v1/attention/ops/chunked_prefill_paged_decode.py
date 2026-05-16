@@ -17,7 +17,7 @@ from vllm.triton_utils import tl, triton
 from .prefix_prefill import context_attention_fwd
 from vllm.v1.attention.backend import AttentionType
 from vllm.v1.kv_cache_interface import get_kv_quant_mode
-from vllm.v1.attention.ops.torch_prefill_attention import (
+from vllm.v1.attention.ops.torch_attention import (
     can_use_torch_sdpa_prefill, torch_sdpa_prefill_attention)
 from vllm.platforms.rocm import on_gfx906
 

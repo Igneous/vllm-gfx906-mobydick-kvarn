@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 # SPDX-FileCopyrightText: Copyright contributors to the vLLM project
-"""Torch SDPA prefill attention kernels."""
+"""Torch SDPA attention kernels."""
 
 import contextlib
 from typing import Iterator, Optional
@@ -29,14 +29,15 @@ except (ImportError, AttributeError):
 
 # constants
 _LOGGED_TORCH_SDPA_PREFILL = False
+_LOGGED_TORCH_SDPA_DECODE = False
 
 
 @contextlib.contextmanager
-def _torch_sdpa_prefill_backend() -> Iterator[None]:
-    if envs.VLLM_TORCH_SDPA_PREFILL_BACKEND == "auto" or sdpa_kernel is None:
+def _torch_sdpa_backend() -> Iterator[None]:
+    if envs.VLLM_TORCH_SDPA_BACKEND == "auto" or sdpa_kernel is None:
         yield
         return
-    if envs.VLLM_TORCH_SDPA_PREFILL_BACKEND == "math" and SDPBackend is not None:
+    if envs.VLLM_TORCH_SDPA_BACKEND == "math" and SDPBackend is not None:
         with sdpa_kernel([SDPBackend.MATH]):
             yield
         return
@@ -66,10 +67,23 @@ def _log_torch_sdpa_prefill_once() -> None:
     logger.info(
         "Using experimental Torch SDPA prefill path "
         "(backend=%s, min_tokens=%d, max_tokens=%d, q_chunk_size=%d)",
-        envs.VLLM_TORCH_SDPA_PREFILL_BACKEND,
+        envs.VLLM_TORCH_SDPA_BACKEND,
         envs.VLLM_TORCH_SDPA_PREFILL_MIN_TOKENS,
         envs.VLLM_TORCH_SDPA_PREFILL_MAX_TOKENS,
         envs.VLLM_TORCH_SDPA_PREFILL_Q_CHUNK_SIZE,
+    )
+
+
+def _log_torch_sdpa_decode_once() -> None:
+    global _LOGGED_TORCH_SDPA_DECODE
+    if _LOGGED_TORCH_SDPA_DECODE:
+        return
+    _LOGGED_TORCH_SDPA_DECODE = True
+    logger.info(
+        "Using experimental Torch SDPA decode path "
+        "(backend=%s, max_seqs=%d)",
+        envs.VLLM_TORCH_SDPA_BACKEND,
+        envs.VLLM_TORCH_SDPA_DECODE_MAX_SEQS,
     )
 
 
@@ -110,7 +124,12 @@ def can_use_torch_sdpa_prefill(
         logger.debug("Torch SDPA prefill skip: q_dtype %s not in (FP16, BF16)", q_dtype)
         return False
     if k_dtype != q_dtype or v_dtype != q_dtype:
-        logger.debug("Torch SDPA prefill skip: dtype mismatch Q:%s K:%s V:%s", q_dtype, k_dtype, v_dtype)
+        logger.debug(
+            "Torch SDPA prefill skip: dtype mismatch Q:%s K:%s V:%s",
+            q_dtype,
+            k_dtype,
+            v_dtype,
+        )
         return False
     if alibi_slopes is not None or use_alibi_sqrt:
         logger.debug("Torch SDPA prefill skip: ALiBi not supported")
@@ -132,18 +151,27 @@ def can_use_torch_sdpa_prefill(
         return False
 
     if (query_lens_cpu <= 1).any().item():
-        logger.debug("Torch SDPA prefill skip: mixed batch with decode tokens in query_lens_cpu")
+        logger.debug(
+            "Torch SDPA prefill skip: mixed batch with decode tokens in "
+            "query_lens_cpu"
+        )
         return False
 
     total_prefill_tokens = int(query_lens_cpu.sum().item())
     if total_prefill_tokens < envs.VLLM_TORCH_SDPA_PREFILL_MIN_TOKENS:
-        logger.debug("Torch SDPA prefill skip: total_tokens %d < MIN_TOKENS %d", 
-                     total_prefill_tokens, envs.VLLM_TORCH_SDPA_PREFILL_MIN_TOKENS)
+        logger.debug(
+            "Torch SDPA prefill skip: total_tokens %d < MIN_TOKENS %d",
+            total_prefill_tokens,
+            envs.VLLM_TORCH_SDPA_PREFILL_MIN_TOKENS,
+        )
         return False
     if (envs.VLLM_TORCH_SDPA_PREFILL_MAX_TOKENS > 0
             and total_prefill_tokens > envs.VLLM_TORCH_SDPA_PREFILL_MAX_TOKENS):
-        logger.debug("Torch SDPA prefill skip: total_tokens %d > MAX_TOKENS %d", 
-                     total_prefill_tokens, envs.VLLM_TORCH_SDPA_PREFILL_MAX_TOKENS)
+        logger.debug(
+            "Torch SDPA prefill skip: total_tokens %d > MAX_TOKENS %d",
+            total_prefill_tokens,
+            envs.VLLM_TORCH_SDPA_PREFILL_MAX_TOKENS,
+        )
         return False
 
     if seq_lens_cpu is None:
@@ -177,7 +205,7 @@ def torch_sdpa_prefill_attention(
         block_size = key_cache.shape[1]
     head_size = q.shape[-1]
 
-    with _torch_sdpa_prefill_backend():
+    with _torch_sdpa_backend():
         for seq_idx in range(query_lens_cpu.shape[0]):
             query_start = int(query_start_loc_cpu[seq_idx].item())
             query_end = int(query_start_loc_cpu[seq_idx + 1].item())
@@ -186,7 +214,7 @@ def torch_sdpa_prefill_attention(
             num_kv_blocks = (kv_len + block_size - 1) // block_size
 
             block_ids = block_table[seq_idx, :num_kv_blocks].to(torch.long)
-            
+
             if key_cache.ndim == 5:
                 # ROCM_ATTN layout:
                 # key_cache: (num_blocks, num_kv_heads, head_size // x, block_size, x)
@@ -256,4 +284,174 @@ def torch_sdpa_prefill_attention(
                     scale=scale,
                 )
                 output[q_start:q_end].copy_(out.squeeze(0).transpose(0, 1))
+    return output
+
+
+def can_use_torch_sdpa_decode(
+    q: torch.Tensor,
+    key_cache: torch.Tensor,
+    value_cache: torch.Tensor,
+    attn_type: AttentionType,
+    max_query_len: int,
+    _kv_quant_mode: KVQuantMode,
+    alibi_slopes: Optional[torch.Tensor],
+    use_alibi_sqrt: bool,
+    sinks: Optional[torch.Tensor],
+    logits_soft_cap: float,
+    sliding_window: tuple[int, int],
+    chunk_lookback: int,
+    seq_lens_cpu: Optional[torch.Tensor],
+    query_start_loc_cpu: torch.Tensor,
+    output_scale: Optional[torch.Tensor],
+    mm_prefix_range_tensor: Optional[torch.Tensor],
+) -> bool:
+    if not envs.VLLM_TORCH_SDPA_DECODE:
+        return False
+
+    if torch.cuda.is_available() and torch.cuda.is_current_stream_capturing():
+        return False
+
+    if attn_type != AttentionType.DECODER:
+        return False
+
+    if max_query_len != 1:
+        return False
+
+    if output_scale is not None:
+        return False
+
+    if _kv_quant_mode != KVQuantMode.NONE:
+        return False
+
+    if q.dtype not in (torch.float16, torch.bfloat16):
+        return False
+
+    if key_cache.dtype != q.dtype or value_cache.dtype != q.dtype:
+        return False
+
+    if alibi_slopes is not None or use_alibi_sqrt:
+        return False
+
+    if sinks is not None:
+        return False
+
+    if logits_soft_cap != 0:
+        return False
+
+    if sliding_window != (-1, -1):
+        return False
+
+    if chunk_lookback != -1:
+        return False
+
+    if mm_prefix_range_tensor is not None:
+        return False
+
+    query_lens_cpu = query_start_loc_cpu[1:] - query_start_loc_cpu[:-1]
+
+    if (query_lens_cpu != 1).any().item():
+        return False
+
+    if seq_lens_cpu is None:
+        return False
+
+    max_seqs = envs.VLLM_TORCH_SDPA_DECODE_MAX_SEQS
+    if query_lens_cpu.shape[0] > max_seqs:
+        return False
+
+    return True
+
+
+def torch_sdpa_decode_attention(
+    q: torch.Tensor,
+    key_cache: torch.Tensor,
+    value_cache: torch.Tensor,
+    block_table: torch.Tensor,
+    query_start_loc_cpu: torch.Tensor,
+    seq_lens_cpu: torch.Tensor,
+    num_kv_heads: int,
+    num_queries_per_kv: int,
+    scale: float,
+    output: torch.Tensor,
+) -> torch.Tensor:
+    """
+    Experimental Torch SDPA decode path.
+
+    Intended only for max_query_len == 1 decode batches.
+    This gathers paged KV into temporary contiguous K/V tensors, so it may be
+    slower than the Triton paged-attention kernel for normal decode.
+    """
+    _log_torch_sdpa_decode_once()
+
+    query_lens_cpu = query_start_loc_cpu[1:] - query_start_loc_cpu[:-1]
+
+    if key_cache.ndim == 5:
+        block_size = key_cache.shape[3]
+    else:
+        block_size = key_cache.shape[1]
+
+    head_size = q.shape[-1]
+
+    with _torch_sdpa_backend():
+        for seq_idx in range(query_lens_cpu.shape[0]):
+            query_start = int(query_start_loc_cpu[seq_idx].item())
+            query_end = int(query_start_loc_cpu[seq_idx + 1].item())
+            query_len = int(query_lens_cpu[seq_idx].item())
+            kv_len = int(seq_lens_cpu[seq_idx].item())
+
+            # This function is decode-only.
+            if query_len != 1:
+                raise RuntimeError(
+                    f"torch_sdpa_decode_attention expected query_len == 1, "
+                    f"got query_len={query_len}"
+                )
+
+            num_kv_blocks = (kv_len + block_size - 1) // block_size
+            block_ids = block_table[seq_idx, :num_kv_blocks].to(torch.long)
+
+            if key_cache.ndim == 5:
+                # ROCM_ATTN layout:
+                # key_cache:   (num_blocks, num_kv_heads, head_size // x, block_size, x)
+                # value_cache: (num_blocks, num_kv_heads, head_size, block_size)
+                k = (
+                    key_cache.index_select(0, block_ids)
+                    .permute(0, 3, 1, 2, 4)
+                    .reshape(-1, num_kv_heads, head_size)[:kv_len]
+                )
+                v = (
+                    value_cache.index_select(0, block_ids)
+                    .permute(0, 3, 1, 2)
+                    .reshape(-1, num_kv_heads, head_size)[:kv_len]
+                )
+            else:
+                # Triton/CUDA layout:
+                # key_cache/value_cache: (num_blocks, block_size, num_kv_heads, head_size)
+                k = (
+                    key_cache.index_select(0, block_ids)
+                    .reshape(-1, num_kv_heads, head_size)[:kv_len]
+                )
+                v = (
+                    value_cache.index_select(0, block_ids)
+                    .reshape(-1, num_kv_heads, head_size)[:kv_len]
+                )
+
+            if num_queries_per_kv != 1:
+                k = k.repeat_interleave(num_queries_per_kv, dim=1)
+                v = v.repeat_interleave(num_queries_per_kv, dim=1)
+
+            q_seq = q[query_start:query_end].transpose(0, 1).unsqueeze(0)
+            k_seq = k.transpose(0, 1).unsqueeze(0)
+            v_seq = v.transpose(0, 1).unsqueeze(0)
+
+            out = F.scaled_dot_product_attention(
+                q_seq,
+                k_seq,
+                v_seq,
+                attn_mask=None,
+                is_causal=False,
+                scale=scale,
+            )
+
+            output[query_start:query_end].copy_(out.squeeze(0).transpose(0, 1))
+
     return output
