@@ -12,6 +12,7 @@ from typing import Any
 import torch
 
 import vllm.envs as envs
+from vllm.logger import init_logger
 from vllm.platforms import current_platform
 from vllm.platforms.rocm import on_gfx906
 from vllm.triton_utils import tl, triton
@@ -32,6 +33,7 @@ from vllm.v1.kv_cache_interface import KVQuantMode
 
 is_batch_invariant = envs.VLLM_BATCH_INVARIANT
 float8_info = torch.finfo(current_platform.fp8_dtype())
+logger = init_logger(__name__)
 
 
 @triton.jit
@@ -170,9 +172,10 @@ def kernel_unified_attention(
     offs_d = tl.arange(0, HEAD_SIZE_PADDED)
     offs_t = tl.arange(0, TILE_SIZE)
     query_pos = q_block_local_idx * BLOCK_Q + offs_m // num_queries_per_kv
+    query_offset_1 = kv_head_idx * num_queries_per_kv + offs_m % num_queries_per_kv
+    query_head_mask = offs_m < BLOCK_Q * num_queries_per_kv
 
     query_offset_0 = cur_batch_in_all_start_index + query_pos
-    query_offset_1 = kv_head_idx * num_queries_per_kv + offs_m % num_queries_per_kv
     query_offset = (
         query_offset_0[:, None] * query_stride_0
         + query_offset_1[:, None] * query_stride_1
@@ -181,7 +184,9 @@ def kernel_unified_attention(
 
     dim_mask = tl.where(offs_d < HEAD_SIZE, 1, 0).to(tl.int1)
     query_mask_0 = tl.where(query_pos < cur_batch_query_len, 1, 0).to(tl.int1)
-    query_mask_1 = tl.where(query_offset_1 < num_query_heads, 1, 0).to(tl.int1)
+    query_mask_1 = (
+        (query_offset_1 < num_query_heads) & query_head_mask
+    ).to(tl.int1)
 
     # Q : (BLOCK_M, HEAD_SIZE_PADDED)
     Q = tl.load(
@@ -619,6 +624,14 @@ def unified_attention(
     else:
         launch_kwargs = {}
 
+    max_seqlen_q_3d = (
+        softmax_segm_output.shape[0] // seq_threshold_3D
+        if seq_threshold_3D is not None
+        and seq_threshold_3D > 0
+        and softmax_segm_output is not None
+        else 1
+    )
+
     # Launch the 2D kernel if
     # 1. No intermediate tiled softmax buffers for the 3D kernel have been allocated, or
     # 2. The batch includes at least one prefill request, or
@@ -630,7 +643,8 @@ def unified_attention(
         or softmax_segm_output is None
         or softmax_segm_max is None
         or softmax_segm_expsum is None
-        or max_seqlen_q > 1
+        or max_seqlen_q > max_seqlen_q_3d
+        or q.shape[0] > softmax_segm_output.shape[0]
         or num_seqs > seq_threshold_3D
         or is_batch_invariant
     )
@@ -640,6 +654,16 @@ def unified_attention(
     # caches and their strides are required arguments; non-per-token-head
     # modes pass dummy zeros (the code path is dead-code eliminated by
     # the ``USE_PER_TOKEN_HEAD_SCALES`` constexpr branch in the kernel).
+    logger.info_once(
+        "unified_attention route: %s "
+        "(max_query_len=%d, q_tokens=%d, num_seqs=%d, max_query_len_3d=%d)",
+        "3d" if use_3d else "2d",
+        max_seqlen_q,
+        q.shape[0],
+        num_seqs,
+        max_seqlen_q_3d,
+    )
+
     if use_per_token_head_scales:
         ks_strides = k_scale_cache.stride()
         vs_strides = v_scale_cache.stride()

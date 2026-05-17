@@ -31,6 +31,7 @@ if TYPE_CHECKING:
     VLLM_TORCH_SDPA_BACKEND: str = "math" # auto, math, flash
     VLLM_TORCH_SDPA_DECODE: bool = False
     VLLM_TORCH_SDPA_DECODE_MAX_SEQS: int = 1
+    VLLM_TORCH_SDPA_MTP_DECODE: bool = False
     LOCAL_RANK: int = 0
     CUDA_VISIBLE_DEVICES: str | None = None
     VLLM_ENGINE_ITERATION_TIMEOUT_S: int = 60
@@ -1017,6 +1018,10 @@ environment_variables: dict[str, Callable[[], Any]] = {
     ),
     "VLLM_TORCH_SDPA_DECODE_MAX_SEQS": lambda: int(
         os.environ.get("VLLM_TORCH_SDPA_DECODE_MAX_SEQS", "1")
+    ),
+    "VLLM_TORCH_SDPA_MTP_DECODE": lambda: (
+        os.environ.get("VLLM_TORCH_SDPA_MTP_DECODE", "False").lower()
+        in ("true", "1")
     ),
     "VLLM_ROCM_MLA_SPARSE_FP16": lambda: (
         os.getenv("VLLM_ROCM_MLA_SPARSE_FP16", "False").lower() in ("true", "1")

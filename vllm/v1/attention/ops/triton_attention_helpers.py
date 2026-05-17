@@ -173,12 +173,7 @@ def compute_tile_loop_bounds(
     """
     # compute the length of the longest sequence prefix spanned by any
     # query token in the current q_block (q_block_local_idx)
-    max_seq_prefix_len = (
-        context_len
-        + q_block_local_idx * BLOCK_Q
-        + (BLOCK_M - 1) // num_queries_per_kv
-        + 1
-    )
+    max_seq_prefix_len = context_len + (q_block_local_idx + 1) * BLOCK_Q
     if USE_MM_PREFIX:
         # image bidirectional attention ranges require a full range
         # including q_block padding to make sure doc mask is correct
@@ -196,10 +191,7 @@ def compute_tile_loop_bounds(
     if SLIDING_WINDOW > 0 and not USE_MM_PREFIX:
         # Query rows covered by this Q-block
         qpos_lo = q_block_local_idx * BLOCK_Q
-        qpos_hi = tl.minimum(
-            qpos_lo + (BLOCK_M - 1) // num_queries_per_kv,
-            cur_batch_query_len - 1,
-        )
+        qpos_hi = tl.minimum(qpos_lo + BLOCK_Q - 1, cur_batch_query_len - 1)
         # For sliding window, each query position q can only attend to
         # keys in the range [q_abs - SLIDING_WINDOW + 1, q_abs]
         # where q_abs = context_len + q

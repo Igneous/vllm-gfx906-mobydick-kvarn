@@ -1277,7 +1277,6 @@ class SpecDecodeBaseProposer:
         """
         spec_cfg = self.speculative_config
         base = self.vllm_config
-        draft_attention_backend = spec_cfg.attention_backend
 
         if spec_cfg.moe_backend is not None:
             base = replace(
@@ -1288,17 +1287,6 @@ class SpecDecodeBaseProposer:
                 ),
             )
 
-        if (
-            draft_attention_backend is None
-            and self._should_use_rocm_attn_for_mtp_draft()
-        ):
-            # Default to ROCM_ATTN for gfx906 MTP draft model (as TRITON_ATTN has much lower acceptance rate, mostly seen with Qwen3.6 27B)
-            draft_attention_backend = AttentionBackendEnum.ROCM_ATTN
-            logger.warning_once(
-                "Using ROCM_ATTN for the gfx906 MTP draft model. "
-                "The target model attention backend is unchanged. Set "
-                "'attention_backend' in speculative_config to override this."
-            )
 
         # Note (matt): Never inherit the attention backend from base, because there are
         # many opportunities for incompatibility, so we always independently autoselect
@@ -1307,22 +1295,12 @@ class SpecDecodeBaseProposer:
             base,
             attention_config=replace(
                 base.attention_config,
-                backend=draft_attention_backend,
+                backend=spec_cfg.attention_backend,
             ),
         )
 
         return base
 
-    def _should_use_rocm_attn_for_mtp_draft(self) -> bool:
-        if self.method != "mtp" or not current_platform.is_rocm():
-            return False
-
-        try:
-            from vllm.platforms.rocm import on_gfx906
-        except Exception:
-            return False
-
-        return on_gfx906()
 
     def _get_model(self) -> nn.Module:
         """

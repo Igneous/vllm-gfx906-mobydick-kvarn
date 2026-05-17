@@ -30,6 +30,7 @@ except (ImportError, AttributeError):
 # constants
 _LOGGED_TORCH_SDPA_PREFILL = False
 _LOGGED_TORCH_SDPA_DECODE = False
+_LOGGED_TORCH_SDPA_MTP_DECODE = False
 
 
 @contextlib.contextmanager
@@ -87,6 +88,18 @@ def _log_torch_sdpa_decode_once() -> None:
     )
 
 
+def _log_torch_sdpa_mtp_decode_once() -> None:
+    global _LOGGED_TORCH_SDPA_MTP_DECODE
+    if _LOGGED_TORCH_SDPA_MTP_DECODE:
+        return
+    _LOGGED_TORCH_SDPA_MTP_DECODE = True
+    logger.info(
+        "Using experimental Torch SDPA MTP decode verifier path "
+        "(backend=%s)",
+        envs.VLLM_TORCH_SDPA_BACKEND,
+    )
+
+
 def can_use_torch_sdpa_prefill(
     num_actual_tokens: int,
     max_query_len: int,
@@ -107,6 +120,9 @@ def can_use_torch_sdpa_prefill(
     mm_prefix_range_tensor: Optional[torch.Tensor],
 ) -> bool:
     if not envs.VLLM_TORCH_SDPA_PREFILL:
+        return False
+    if torch.cuda.is_available() and torch.cuda.is_current_stream_capturing():
+        logger.debug("Torch SDPA prefill skip: CUDA graph capture is active")
         return False
     if attn_type != AttentionType.DECODER:
         logger.debug("Torch SDPA prefill skip: attn_type %s != DECODER", attn_type)
@@ -183,6 +199,110 @@ def can_use_torch_sdpa_prefill(
     return True
 
 
+def can_use_torch_sdpa_mtp_decode(
+    q: torch.Tensor,
+    key_cache: torch.Tensor,
+    value_cache: torch.Tensor,
+    attn_type: AttentionType,
+    max_query_len: int,
+    max_decode_query_len: int,
+    kv_quant_mode: KVQuantMode,
+    alibi_slopes: Optional[torch.Tensor],
+    use_alibi_sqrt: bool,
+    sinks: Optional[torch.Tensor],
+    logits_soft_cap: float,
+    sliding_window: tuple[int, int],
+    chunk_lookback: int,
+    seq_lens_cpu: Optional[torch.Tensor],
+    query_start_loc_cpu: torch.Tensor,
+    is_prefilling: Optional[torch.Tensor],
+    output_scale: Optional[torch.Tensor],
+    mm_prefix_range_tensor: Optional[torch.Tensor],
+) -> bool:
+    if not envs.VLLM_TORCH_SDPA_MTP_DECODE:
+        return False
+
+    # This path uses CPU lengths to choose gather sizes and SDPA mask shapes.
+    # Capturing it would bake dummy capture-time lengths into the graph.
+    if torch.cuda.is_available() and torch.cuda.is_current_stream_capturing():
+        return False
+
+    if attn_type != AttentionType.DECODER:
+        return False
+
+    if max_query_len <= 1:
+        return False
+
+    if max_query_len > max_decode_query_len:
+        logger.debug(
+            "Torch SDPA MTP decode skip: max_query_len %d > "
+            "max_decode_query_len %d",
+            max_query_len,
+            max_decode_query_len,
+        )
+        return False
+
+    if is_prefilling is not None:
+        num_reqs = query_start_loc_cpu.shape[0] - 1
+        if is_prefilling[:num_reqs].any().item():
+            logger.debug("Torch SDPA MTP decode skip: prefill batch")
+            return False
+
+    if output_scale is not None:
+        return False
+
+    if kv_quant_mode != KVQuantMode.NONE:
+        return False
+
+    if q.dtype not in (torch.float16, torch.bfloat16):
+        return False
+
+    if key_cache.dtype != q.dtype or value_cache.dtype != q.dtype:
+        return False
+
+    if alibi_slopes is not None or use_alibi_sqrt:
+        return False
+
+    if sinks is not None:
+        return False
+
+    if logits_soft_cap != 0:
+        return False
+
+    if sliding_window != (-1, -1):
+        return False
+
+    if chunk_lookback != -1:
+        return False
+
+    if mm_prefix_range_tensor is not None:
+        return False
+
+    if seq_lens_cpu is None:
+        return False
+
+    query_lens_cpu = query_start_loc_cpu[1:] - query_start_loc_cpu[:-1]
+    if query_lens_cpu.shape[0] > seq_lens_cpu.shape[0]:
+        return False
+
+    active = query_lens_cpu > 0
+    if not active.any().item():
+        return False
+
+    active_query_lens = query_lens_cpu[active]
+    if (active_query_lens <= 1).all().item():
+        return False
+
+    if (active_query_lens > max_query_len).any().item():
+        return False
+
+    active_seq_lens = seq_lens_cpu[:query_lens_cpu.shape[0]][active]
+    if (active_seq_lens < active_query_lens).any().item():
+        return False
+
+    return True
+
+
 def torch_sdpa_prefill_attention(
     q: torch.Tensor,
     key_cache: torch.Tensor,
@@ -194,8 +314,10 @@ def torch_sdpa_prefill_attention(
     num_queries_per_kv: int,
     scale: float,
     output: torch.Tensor,
+    log_prefill: bool = True,
 ) -> torch.Tensor:
-    _log_torch_sdpa_prefill_once()
+    if log_prefill:
+        _log_torch_sdpa_prefill_once()
 
     query_lens_cpu = query_start_loc_cpu[1:] - query_start_loc_cpu[:-1]
 
@@ -211,6 +333,10 @@ def torch_sdpa_prefill_attention(
             query_end = int(query_start_loc_cpu[seq_idx + 1].item())
             query_len = int(query_lens_cpu[seq_idx].item())
             kv_len = int(seq_lens_cpu[seq_idx].item())
+
+            if query_len == 0:
+                continue
+
             num_kv_blocks = (kv_len + block_size - 1) // block_size
 
             block_ids = block_table[seq_idx, :num_kv_blocks].to(torch.long)
@@ -285,6 +411,34 @@ def torch_sdpa_prefill_attention(
                 )
                 output[q_start:q_end].copy_(out.squeeze(0).transpose(0, 1))
     return output
+
+
+def torch_sdpa_mtp_decode_attention(
+    q: torch.Tensor,
+    key_cache: torch.Tensor,
+    value_cache: torch.Tensor,
+    block_table: torch.Tensor,
+    query_start_loc_cpu: torch.Tensor,
+    seq_lens_cpu: torch.Tensor,
+    num_kv_heads: int,
+    num_queries_per_kv: int,
+    scale: float,
+    output: torch.Tensor,
+) -> torch.Tensor:
+    _log_torch_sdpa_mtp_decode_once()
+    return torch_sdpa_prefill_attention(
+        q=q,
+        key_cache=key_cache,
+        value_cache=value_cache,
+        block_table=block_table,
+        query_start_loc_cpu=query_start_loc_cpu,
+        seq_lens_cpu=seq_lens_cpu,
+        num_kv_heads=num_kv_heads,
+        num_queries_per_kv=num_queries_per_kv,
+        scale=scale,
+        output=output,
+        log_prefill=False,
+    )
 
 
 def can_use_torch_sdpa_decode(
