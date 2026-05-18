@@ -130,6 +130,7 @@ def kernel_unified_attention(
     # to ``[segm_idx, segm_idx+1) × tiles_per_segment`` and writes
     # per-segment partials, finalized by ``reduce_segments``.
     IS_3D: tl.constexpr,
+    CAUSAL: tl.constexpr,
     # KV cache quantization mode handled inside this kernel via constexpr
     # branches: NONE (0), FP8_PER_TENSOR (1), INT8_PER_TOKEN_HEAD (2),
     # FP8_PER_TOKEN_HEAD (3).
@@ -232,6 +233,7 @@ def kernel_unified_attention(
         SLIDING_WINDOW,
         USE_MM_PREFIX,
         IS_3D,
+        CAUSAL,
         CHUNK_LOOKBACK,
         CHUNK_SIZE,
     )
@@ -295,11 +297,13 @@ def kernel_unified_attention(
         seq_mask = compute_kv_seq_mask(
             query_abs_pos,
             seq_offset,
+            seq_len,
             seq_idx,
             mm_prefix_range_ptr,
             SLIDING_WINDOW,
             USE_MM_PREFIX,
             MAX_MM_RANGES,
+            CAUSAL,
             CHUNK_LOOKBACK,
             CHUNK_SIZE,
         )
@@ -547,7 +551,6 @@ def unified_attention(
     # Chunked attention: restrict attention to aligned blocks with lookback.
     chunk_lookback=-1,
 ):
-    assert causal, "Only causal attention is supported"
     assert q_descale is None, "Q scales not supported"
 
     if sinks is not None:
@@ -755,6 +758,7 @@ def unified_attention(
         NUM_SEGMENTS_PER_SEQ=num_segments,
         USE_FP8=output_scale is not None,
         IS_3D=use_3d,
+        CAUSAL=causal,
         KV_QUANT_MODE=kv_quant_mode,
         CHUNK_LOOKBACK=chunk_lookback,
         CHUNK_SIZE=chunk_size,

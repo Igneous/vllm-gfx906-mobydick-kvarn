@@ -88,6 +88,7 @@ class TritonAttentionMetadata:
     softmax_segm_output: torch.Tensor
     softmax_segm_max: torch.Tensor
     softmax_segm_expsum: torch.Tensor
+    causal: bool
 
     # For cascade attention.
     use_cascade: bool
@@ -291,6 +292,7 @@ class TritonAttentionMetadataBuilder(AttentionMetadataBuilder[TritonAttentionMet
             softmax_segm_output=self.softmax_segm_output,
             softmax_segm_max=self.softmax_segm_max,
             softmax_segm_expsum=self.softmax_segm_expsum,
+            causal=common_attn_metadata.causal,
         )
         return attn_metadata
 
@@ -330,6 +332,10 @@ class TritonAttentionBackend(AttentionBackend):
 
     @classmethod
     def supports_batch_invariance(cls) -> bool:
+        return True
+
+    @classmethod
+    def supports_non_causal(cls) -> bool:
         return True
 
     @staticmethod
@@ -835,13 +841,16 @@ class TritonAttentionImpl(AttentionImpl):
 
         mm_prefix_range_tensor = attn_metadata.mm_prefix_range_tensor
 
-        if self._can_use_torch_sdpa_mtp_decode(
+        if (
+            attn_metadata.causal
+            and self._can_use_torch_sdpa_mtp_decode(
                 query[:num_actual_tokens],
                 key_cache,
                 value_cache,
                 attn_metadata,
                 output_scale,
                 mm_prefix_range_tensor,
+            )
         ):
             logger.info_once(
                 "TritonAttentionImpl route: torch_sdpa_mtp_decode "
@@ -859,13 +868,16 @@ class TritonAttentionImpl(AttentionImpl):
             )
             return output
 
-        if self._can_use_torch_sdpa_prefill(
+        if (
+            attn_metadata.causal
+            and self._can_use_torch_sdpa_prefill(
                 query[:num_actual_tokens],
                 key_cache,
                 value_cache,
                 attn_metadata,
                 output_scale,
                 mm_prefix_range_tensor,
+            )
         ):
             logger.info_once(
                 "TritonAttentionImpl route: torch_sdpa_prefill "
@@ -883,13 +895,16 @@ class TritonAttentionImpl(AttentionImpl):
             )
             return output
 
-        if self._can_use_torch_sdpa_decode(
+        if (
+            attn_metadata.causal
+            and self._can_use_torch_sdpa_decode(
                 query[:num_actual_tokens],
                 key_cache,
                 value_cache,
                 attn_metadata,
                 output_scale,
                 mm_prefix_range_tensor,
+            )
         ):
             logger.info_once(
                 "TritonAttentionImpl route: torch_sdpa_decode "
@@ -923,7 +938,7 @@ class TritonAttentionImpl(AttentionImpl):
             seqused_k=seqused_k,
             max_seqlen_k=max_seqlen_k,
             softmax_scale=self.scale,
-            causal=True,
+            causal=attn_metadata.causal,
             alibi_slopes=self.alibi_slopes,
             use_alibi_sqrt=self.use_alibi_sqrt,
             window_size=self.sliding_window,
