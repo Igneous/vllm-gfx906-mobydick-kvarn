@@ -107,6 +107,7 @@ __global__ void moe_wna16_gemm_kernel(
 
     float res[64];  // assume BLOCK_SIZE_M <= 64
     scalar_t2 res2;
+    const scalar_t2 zero2 = Dtype::num2num2(Dtype::float2num(0.0f));
     scalar_t2 scale_f2;
     scalar_t2 qzero_f2;
 
@@ -233,7 +234,7 @@ __global__ void moe_wna16_gemm_kernel(
       dequant<scalar_t2, bit>(expert_qweight_tmp[tmp_k % 4], weight_half2);
 
       for (int m = 0; m < num_valid_tokens; m++) {
-        res2 = {};
+        res2 = zero2;
 
 #pragma unroll
         for (int i = 0; i < 16 / bit; i++) {
