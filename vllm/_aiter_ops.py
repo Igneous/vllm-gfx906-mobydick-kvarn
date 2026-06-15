@@ -92,7 +92,8 @@ def is_aiter_found_and_supported() -> bool:
     """Check if AITER library is available and platform supports it.
 
     Checks: platform (ROCm), device arch (gfx9), and library existence.
-    Does NOT check environment variables - that's handled by rocm_aiter_ops.is_enabled().
+    Does NOT check environment variables. Those are handled by
+    rocm_aiter_ops.is_enabled().
 
     This function determines if aiter CAN be used, not if it SHOULD be used.
 
@@ -104,9 +105,13 @@ def is_aiter_found_and_supported() -> bool:
     This allows explicit backend selection via attention_config to work even when
     VLLM_ROCM_USE_AITER=0, while preventing unwanted JIT warnings for auto-discovery.
     """
-    # TODO: fix ugly workaround that enables ops registration (rocm_aiter_sparse_attn_indexer) on gfx906
-    from vllm.platforms.rocm import on_mi3xx, on_gfx906
-    if current_platform.is_rocm() and (IS_AITER_FOUND or on_gfx906()):
+    if not current_platform.is_rocm():
+        return False
+
+    # Keep sparse-indexer op registration available for the gfx906 fallback.
+    from vllm.platforms.rocm import on_gfx906, on_mi3xx
+
+    if IS_AITER_FOUND or on_gfx906():
         return on_mi3xx() or on_gfx906()
     return False
 

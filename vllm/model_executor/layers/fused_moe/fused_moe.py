@@ -29,11 +29,17 @@ from vllm.model_executor.layers.fused_moe.utils import (
     moe_kernel_quantize_input,
 )
 from vllm.platforms import current_platform
-from vllm.platforms.rocm import on_gfx906
 from vllm.triton_utils import tl, triton
 from vllm.utils.torch_utils import direct_register_custom_op
 
 logger = init_logger(__name__)
+
+if current_platform.is_rocm():
+    from vllm.platforms.rocm import on_gfx906
+else:
+
+    def on_gfx906() -> bool:
+        return False
 
 
 @triton.jit

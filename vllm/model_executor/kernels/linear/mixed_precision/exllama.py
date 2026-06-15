@@ -10,10 +10,16 @@ from vllm.model_executor.layers.quantization.utils.quant_utils import (
 )
 from vllm.model_executor.parameter import BasevLLMParameter, permute_param_layout_
 from vllm.platforms import current_platform
-from vllm.platforms.rocm import on_gfx906
 from vllm.scalar_type import scalar_types
 
 from .MPLinearKernel import MPLinearKernel, MPLinearLayerConfig
+
+if current_platform.is_rocm():
+    from vllm.platforms.rocm import on_gfx906
+else:
+
+    def on_gfx906() -> bool:
+        return False
 
 
 class ExllamaLinearKernel(MPLinearKernel):

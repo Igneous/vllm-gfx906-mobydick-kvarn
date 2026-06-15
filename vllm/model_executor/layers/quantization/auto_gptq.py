@@ -60,12 +60,19 @@ from vllm.model_executor.parameter import (
     PackedvLLMParameter,
     RowvLLMParameter,
 )
-from vllm.platforms.rocm import on_gfx906
+from vllm.platforms import current_platform
 from vllm.scalar_type import scalar_types
 from vllm.transformers_utils.config import get_safetensors_params_metadata
 from vllm.utils.collection_utils import is_list_of
 
 logger = init_logger(__name__)
+
+if current_platform.is_rocm():
+    from vllm.platforms.rocm import on_gfx906
+else:
+
+    def on_gfx906() -> bool:
+        return False
 
 
 def get_moe_quant_method(

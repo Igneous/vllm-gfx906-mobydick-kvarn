@@ -10,8 +10,15 @@ from vllm.model_executor.layers.fused_moe.topk_weight_and_reduce import (
     TopKWeightAndReduceDelegate,
 )
 from vllm.model_executor.layers.fused_moe.utils import moe_kernel_quantize_input
-from vllm.platforms.rocm import on_gfx906
+from vllm.platforms import current_platform
 from vllm.utils.flashinfer import nvfp4_block_scale_interleave
+
+if current_platform.is_rocm():
+    from vllm.platforms.rocm import on_gfx906
+else:
+
+    def on_gfx906() -> bool:
+        return False
 
 
 def _quantize_and_setup_dispatch(

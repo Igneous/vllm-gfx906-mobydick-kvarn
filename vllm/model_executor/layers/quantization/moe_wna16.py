@@ -32,7 +32,13 @@ from vllm.model_executor.layers.quantization.utils.marlin_utils import (
 )
 from vllm.model_executor.utils import set_weight_attrs
 from vllm.platforms import current_platform
-from vllm.platforms.rocm import on_gfx906
+
+if current_platform.is_rocm():
+    from vllm.platforms.rocm import on_gfx906
+else:
+
+    def on_gfx906() -> bool:
+        return False
 
 
 class MoeWNA16Config(QuantizationConfig):

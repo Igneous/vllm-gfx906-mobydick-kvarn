@@ -47,9 +47,15 @@ from vllm.model_executor.layers.quantization.utils.quant_utils import (
     kInt8StaticChannelSym,
 )
 from vllm.platforms import current_platform
-from vllm.platforms.rocm import on_gfx906
 from vllm.triton_utils import tl
 from vllm.utils.multi_stream_utils import maybe_execute_in_parallel
+
+if current_platform.is_rocm():
+    from vllm.platforms.rocm import on_gfx906
+else:
+
+    def on_gfx906() -> bool:
+        return False
 
 
 class TritonExperts(LoRAExpertsMixin, mk.FusedMoEExpertsModular):

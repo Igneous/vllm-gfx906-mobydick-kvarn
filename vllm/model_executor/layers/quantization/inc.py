@@ -27,13 +27,19 @@ from vllm.model_executor.parameter import (
     RowvLLMParameter,
 )
 from vllm.platforms import current_platform
-from vllm.platforms.rocm import on_gfx906
 from vllm.scalar_type import scalar_types
 
 if TYPE_CHECKING:
     from vllm.model_executor.models.utils import WeightsMapper
 
 logger = init_logger(__name__)
+
+if current_platform.is_rocm():
+    from vllm.platforms.rocm import on_gfx906
+else:
+
+    def on_gfx906() -> bool:
+        return False
 
 
 class INCConfig(QuantizationConfig):

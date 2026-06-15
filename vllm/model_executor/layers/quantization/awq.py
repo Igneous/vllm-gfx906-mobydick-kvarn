@@ -23,14 +23,21 @@ from vllm.model_executor.layers.quantization.base_config import (
 from vllm.model_executor.layers.quantization.utils import replace_parameter
 from vllm.model_executor.layers.quantization.utils.quant_utils import is_layer_skipped
 from vllm.model_executor.parameter import GroupQuantScaleParameter, PackedvLLMParameter
+from vllm.platforms import current_platform
 from vllm.transformers_utils.config import get_safetensors_params_metadata
-from vllm.platforms.rocm import on_gfx906
 
 if TYPE_CHECKING:
     from vllm.model_executor.layers.quantization import QuantizationMethods
     from vllm.model_executor.models.utils import WeightsMapper
 
 logger = init_logger(__name__)
+
+if current_platform.is_rocm():
+    from vllm.platforms.rocm import on_gfx906
+else:
+
+    def on_gfx906() -> bool:
+        return False
 
 
 class AWQConfig(QuantizationConfig):

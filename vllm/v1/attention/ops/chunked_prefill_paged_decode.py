@@ -13,15 +13,23 @@ from vllm import _custom_ops as ops
 from vllm.logger import init_logger
 from vllm.platforms import current_platform
 from vllm.triton_utils import tl, triton
+from vllm.v1.attention.backend import AttentionType
+from vllm.v1.attention.ops.torch_attention import (
+    can_use_torch_sdpa_prefill,
+    torch_sdpa_prefill_attention,
+)
+from vllm.v1.kv_cache_interface import get_kv_quant_mode
 
 from .prefix_prefill import context_attention_fwd
-from vllm.v1.attention.backend import AttentionType
-from vllm.v1.kv_cache_interface import get_kv_quant_mode
-from vllm.v1.attention.ops.torch_attention import (
-    can_use_torch_sdpa_prefill, torch_sdpa_prefill_attention)
-from vllm.platforms.rocm import on_gfx906
 
 logger = init_logger(__name__)
+
+if current_platform.is_rocm():
+    from vllm.platforms.rocm import on_gfx906
+else:
+
+    def on_gfx906() -> bool:
+        return False
 
 float8_info = torch.finfo(current_platform.fp8_dtype())
 

@@ -27,7 +27,6 @@ from vllm.model_executor.parameter import (
 )
 from vllm.model_executor.utils import set_weight_attrs
 from vllm.platforms import current_platform
-from vllm.platforms.rocm import on_gfx906
 from vllm.triton_utils import tl, triton
 from vllm.utils.deep_gemm import (
     get_tma_aligned_size,
@@ -37,6 +36,13 @@ from vllm.utils.deep_gemm import (
 from vllm.utils.torch_utils import direct_register_custom_op
 
 logger = init_logger(__name__)
+
+if current_platform.is_rocm():
+    from vllm.platforms.rocm import on_gfx906
+else:
+
+    def on_gfx906() -> bool:
+        return False
 
 
 def is_fp8(x: torch.dtype | torch.Tensor) -> bool:
