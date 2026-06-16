@@ -20,9 +20,125 @@ from vllm.platforms import current_platform
 from vllm.triton_utils import tl, triton
 from vllm.utils.math_utils import round_up
 
+if current_platform.is_rocm():
+    from vllm.platforms.rocm import on_gfx906
+else:
+
+    def on_gfx906() -> bool:
+        return False
+    
 # One sparse block == one KV page.
 SPARSE_BLOCK_SIZE = 128
 
+
+def _index_score_launch_kwargs() -> dict:
+    """Launch kwargs for index-score dot kernels on gfx906."""
+    if current_platform.is_rocm() and on_gfx906():
+        return {
+            "num_warps": 4,
+            "num_stages": 1,
+            "waves_per_eu": 1,
+        }
+    return {}
+
+
+def _topk_index_autotune_configs() -> list:
+    if current_platform.is_rocm() and on_gfx906():
+        return [
+            triton.Config(
+                {"BLOCK_SIZE_K": 2048, "waves_per_eu": 1},
+                num_warps=8,
+                num_stages=1,
+            ),
+            triton.Config(
+                {"BLOCK_SIZE_K": 2048, "waves_per_eu": 1},
+                num_warps=4,
+                num_stages=1,
+            ),
+            triton.Config(
+                {"BLOCK_SIZE_K": 1024, "waves_per_eu": 1},
+                num_warps=4,
+                num_stages=1,
+            ),
+            triton.Config(
+                {"BLOCK_SIZE_K": 1024, "waves_per_eu": 1},
+                num_warps=8,
+                num_stages=1,
+            ),
+            triton.Config(
+                {"BLOCK_SIZE_K": 512, "waves_per_eu": 1},
+                num_warps=8,
+                num_stages=1,
+            ),
+            triton.Config(
+                {"BLOCK_SIZE_K": 512, "waves_per_eu": 1},
+                num_warps=4,
+                num_stages=1,
+            ),
+            triton.Config(
+                {"BLOCK_SIZE_K": 256, "waves_per_eu": 1},
+                num_warps=8,
+                num_stages=1,
+            ),
+            triton.Config(
+                {"BLOCK_SIZE_K": 256, "waves_per_eu": 1},
+                num_warps=4,
+                num_stages=1,
+            ),
+            triton.Config(
+                {"BLOCK_SIZE_K": 128, "waves_per_eu": 1},
+                num_warps=4,
+                num_stages=1,
+            ),
+            triton.Config(
+                {"BLOCK_SIZE_K": 64, "waves_per_eu": 1},
+                num_warps=2,
+                num_stages=1,
+            ),
+        ]
+
+    return [
+        triton.Config({"BLOCK_SIZE_K": 2048}, num_warps=8, num_stages=2),
+        triton.Config({"BLOCK_SIZE_K": 1024}, num_warps=8, num_stages=2),
+        triton.Config({"BLOCK_SIZE_K": 512}, num_warps=8, num_stages=2),
+        triton.Config({"BLOCK_SIZE_K": 256}, num_warps=8, num_stages=2),
+        triton.Config({"BLOCK_SIZE_K": 128}, num_warps=4, num_stages=2),
+        triton.Config({"BLOCK_SIZE_K": 64}, num_warps=2, num_stages=2),
+    ]
+
+
+def _topk_index_partial_autotune_configs() -> list:
+    if current_platform.is_rocm() and on_gfx906():
+        return [
+            triton.Config(
+                {"BLOCK_SIZE_K": 256, "waves_per_eu": 1},
+                num_warps=8,
+                num_stages=1,
+            ),
+            triton.Config(
+                {"BLOCK_SIZE_K": 256, "waves_per_eu": 1},
+                num_warps=4,
+                num_stages=1,
+            ),
+            triton.Config(
+                {"BLOCK_SIZE_K": 128, "waves_per_eu": 1},
+                num_warps=4,
+                num_stages=1,
+            ),
+            triton.Config(
+                {"BLOCK_SIZE_K": 64, "waves_per_eu": 1},
+                num_warps=2,
+                num_stages=1,
+            ),
+        ]
+
+    return [
+        triton.Config({"BLOCK_SIZE_K": 256}, num_warps=8, num_stages=2),
+        triton.Config({"BLOCK_SIZE_K": 256}, num_warps=4, num_stages=2),
+        triton.Config({"BLOCK_SIZE_K": 128}, num_warps=4, num_stages=2),
+        triton.Config({"BLOCK_SIZE_K": 128}, num_warps=4, num_stages=3),
+        triton.Config({"BLOCK_SIZE_K": 64}, num_warps=2, num_stages=2),
+    ]
 
 # ---------------------------------------------------------------------------
 # Bitonic top-k helpers (layout-agnostic).
@@ -174,14 +290,7 @@ def _index_block_score_kernel(
 # need pointer alignment for those tensors anyway because we do scalar load.
 @triton.heuristics({"BLOCK_SIZE_T": lambda args: triton.next_power_of_2(args["topk"])})
 @triton.autotune(
-    configs=[
-        triton.Config({"BLOCK_SIZE_K": 2048}, num_warps=8, num_stages=2),
-        triton.Config({"BLOCK_SIZE_K": 1024}, num_warps=8, num_stages=2),
-        triton.Config({"BLOCK_SIZE_K": 512}, num_warps=8, num_stages=2),
-        triton.Config({"BLOCK_SIZE_K": 256}, num_warps=8, num_stages=2),
-        triton.Config({"BLOCK_SIZE_K": 128}, num_warps=4, num_stages=2),
-        triton.Config({"BLOCK_SIZE_K": 64}, num_warps=2, num_stages=2),
-    ],
+    configs=_topk_index_autotune_configs(),
     key=["BLOCK_SIZE_T"],
 )
 @triton.jit(do_not_specialize_on_alignment=["prefix_lens"])
@@ -389,13 +498,7 @@ def _decode_index_score_kernel(
 # ---------------------------------------------------------------------------
 @triton.heuristics({"BLOCK_SIZE_T": lambda args: triton.next_power_of_2(args["topk"])})
 @triton.autotune(
-    configs=[
-        triton.Config({"BLOCK_SIZE_K": 256}, num_warps=8, num_stages=2),
-        triton.Config({"BLOCK_SIZE_K": 256}, num_warps=4, num_stages=2),
-        triton.Config({"BLOCK_SIZE_K": 128}, num_warps=4, num_stages=2),
-        triton.Config({"BLOCK_SIZE_K": 128}, num_warps=4, num_stages=3),
-        triton.Config({"BLOCK_SIZE_K": 64}, num_warps=2, num_stages=2),
-    ],
+    configs=_topk_index_partial_autotune_configs(),
     key=["topk"],
 )
 @triton.jit(do_not_specialize=["chunk_blocks", "decode_query_len"])
@@ -694,6 +797,7 @@ def minimax_m3_index_score(
         block_table.stride(0),
         BLOCK_SIZE_Q=BLOCK_SIZE_Q,
         BLOCK_SIZE_K=SPARSE_BLOCK_SIZE,
+        **_index_score_launch_kwargs(),
     )
     return score
 
@@ -815,6 +919,7 @@ def minimax_m3_index_decode(
         BLOCK_SIZE_K=SPARSE_BLOCK_SIZE,
         num_kv_chunks=num_kv_chunks,
         USE_PDL=use_pdl,
+        **_index_score_launch_kwargs(),
         **pdl_launch,
     )
 

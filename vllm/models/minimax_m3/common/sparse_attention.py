@@ -49,8 +49,9 @@ class MiniMaxM3SparseBackend(AttentionBackend):
     """Block-sparse GQA backend for MiniMax M3 sparse attention layers."""
 
     supported_dtypes: ClassVar[list[torch.dtype]] = [torch.bfloat16, torch.float16]
-    # bf16 or fp8 (e4m3/e5m2): the Triton kernels dequant fp8 before the dots.
+    # fp16, bf16, or fp8: the Triton kernels dequant fp8 before the dots.
     supported_kv_cache_dtypes: ClassVar[list[CacheDType]] = [
+        "float16",
         "bfloat16",
         "fp8",
         "fp8_e4m3",

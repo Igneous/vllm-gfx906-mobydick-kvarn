@@ -533,15 +533,16 @@ class MiniMaxM3SparseAttention(nn.Module, AttentionLayerBase):
         self.kv_cache_torch_dtype = kv_cache_dtype_str_to_dtype(
             self.kv_cache_dtype, vllm_config.model_config
         )
+        self.indexer_kv_dtype = vllm_config.attention_config.indexer_kv_dtype
         # fp8 main-K/V cache: the fused qknorm+rope+kv-insert op is bf16-cache-only
         # (asserts kv_cache dtype == qkv), so on the fp8 path we run it in
         # norm+rope-only mode and write the cache via the fp8-capable
-        # reshape_and_cache_flash in _insert_kv. (index cache stays bf16.)
+        # reshape_and_cache_flash in _insert_kv.
         self._fp8_kv = "fp8" in self.kv_cache_dtype
 
         self.attn_backend = MiniMaxM3SparseBackend
         # Indexer and main attention are separate impls. On ROCm the SM100 gate
-        # is always False, so both pick Triton and the index cache stays bf16.
+        # is always False, so both pick Triton.
         # impl is AttentionImplBase (broader than AttentionLayerBase's annotation).
         self.impl: MiniMaxM3SparseImpl = select_main_impl_cls(  # type: ignore[assignment]
             topk_blocks=sparse_cfg["sparse_topk_blocks"],
@@ -569,6 +570,7 @@ class MiniMaxM3SparseAttention(nn.Module, AttentionLayerBase):
             local_blocks=sparse_cfg.get("sparse_local_block", 0),
             score_type=sparse_cfg.get("sparse_score_type", "max"),
             cache_config=cache_config,
+            indexer_kv_dtype=self.indexer_kv_dtype,
         )
 
         # Register the main K/V cache so the KV-cache manager allocates it.
@@ -606,7 +608,7 @@ class MiniMaxM3SparseAttention(nn.Module, AttentionLayerBase):
         runs in norm+rope-only mode and the (already normed/roped) k/v/index_k are
         written here via ``reshape_and_cache_flash`` (which honors kv_cache_dtype,
         unit scale -- matching the fp8 read path added in #33). Mirrors the
-        pre-#20 unfused insert. The index cache stays bf16 (no quant).
+        pre-#20 unfused insert.
         """
         key_cache, value_cache = self.kv_cache.unbind(1)
         scale = torch.ones((), device=key.device)
@@ -980,6 +982,22 @@ class MiniMaxM3Model(nn.Module, EagleModelMixin):
 class MiniMaxM3SparseForCausalLM(nn.Module, SupportsEagle3):
     """MiniMax M3 (sparse/dense backbone) for causal language modeling."""
 
+    packed_modules_mapping = {
+        "qkv_proj": ["q_proj", "k_proj", "v_proj"],
+        "gate_up_proj": ["gate_proj", "up_proj"],
+    }
+
+    hf_to_vllm_mapper = WeightsMapper(
+        orig_to_new_substr={
+            ".mlp.fc1.": ".fc1.",
+            ".mlp.fc2.": ".fc2.",
+        },
+        orig_to_new_suffix={
+            ".mlp.fc1": ".fc1",
+            ".mlp.fc2": ".fc2",
+        },
+    )
+
     def __init__(self, *, vllm_config: VllmConfig, prefix: str = ""):
         super().__init__()
         config = vllm_config.model_config.hf_text_config
@@ -1042,6 +1060,10 @@ class MiniMaxM3SparseForConditionalGeneration(
     # data``; ``run_dp_sharded_mrope_vision_model`` shards the work across
     # ranks (see ``_process_image_input`` / ``_process_video_input``).
     supports_encoder_tp_data = True
+    packed_modules_mapping = {
+        "qkv_proj": ["q_proj", "k_proj", "v_proj"],
+        "gate_up_proj": ["gate_proj", "up_proj"],
+    }
 
     hf_to_vllm_mapper = WeightsMapper(
         orig_to_new_prefix={
@@ -1051,6 +1073,10 @@ class MiniMaxM3SparseForConditionalGeneration(
         orig_to_new_substr={
             ".mlp.fc1.": ".fc1.",
             ".mlp.fc2.": ".fc2.",
+        },
+        orig_to_new_suffix={
+            ".mlp.fc1": ".fc1",
+            ".mlp.fc2": ".fc2",
         },
     )
 
