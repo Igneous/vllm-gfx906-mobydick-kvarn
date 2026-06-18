@@ -30,7 +30,10 @@ from vllm.config import (
     VllmConfig,
     get_current_vllm_config,
 )
-from vllm.distributed import get_tensor_model_parallel_world_size
+from vllm.distributed import (
+    get_tensor_model_parallel_rank,
+    get_tensor_model_parallel_world_size,
+)
 from vllm.forward_context import get_forward_context
 from vllm.model_executor.layers.attention import Attention
 from vllm.model_executor.layers.attention_layer_base import AttentionLayerBase
@@ -44,7 +47,7 @@ from vllm.model_executor.layers.fused_moe import (
 )
 from vllm.model_executor.layers.linear import (
     MergedColumnParallelLinear,
-    MinimaxM3QKVParallelLinearWithIndexer,
+    ReplicatedLinear,
     QKVParallelLinear,
     RowParallelLinear,
 )
@@ -489,6 +492,9 @@ class MiniMaxM3SparseAttention(nn.Module, AttentionLayerBase):
         else:
             assert tp_size % self.total_num_kv_heads == 0
         self.num_kv_heads = max(1, self.total_num_kv_heads // tp_size)
+        # How many ranks share each KV head (>1 when tp_size > num_kv_heads).
+        self.num_kv_head_replicas = max(1, tp_size // self.total_num_kv_heads)
+        self.tp_rank = get_tensor_model_parallel_rank()
         self.head_dim = config.head_dim
         self.q_size = self.num_heads * self.head_dim
         self.kv_size = self.num_kv_heads * self.head_dim
@@ -503,17 +509,37 @@ class MiniMaxM3SparseAttention(nn.Module, AttentionLayerBase):
         self.idx_head_dim = sparse_cfg["sparse_index_dim"]
         self.index_q_size = self.num_idx_heads * self.idx_head_dim
 
-        # Single fused projection: q, k, v, index_q, index_k in one GEMM.
-        self.qkv_proj = MinimaxM3QKVParallelLinearWithIndexer(
+        # Main q/k/v projection (quantized when quant_config is set). The sparse
+        # lightning indexer (index_q/index_k) is *not* fused in here: many
+        # checkpoints leave the indexer in bf16 while quantizing q/k/v, which a
+        # single packed GEMM can't represent. We keep them as separate
+        # unquantized projections and re-concatenate into the [q|k|v|index_q|
+        # index_k] layout the fused kernel expects (see forward()).
+        self.qkv_proj = QKVParallelLinear(
             self.hidden_size,
             self.head_dim,
             self.total_num_heads,
             self.total_num_kv_heads,
-            self.total_idx_heads,
-            self.idx_head_dim,
             bias=False,
             quant_config=quant_config,
             prefix=f"{prefix}.qkv_proj",
+        )
+        # Unquantized indexer projections, replicated on every rank (full
+        # weight); the per-rank index_q slice is taken in forward(). index_k is
+        # a single head replicated to all ranks.
+        self.index_q_proj = ReplicatedLinear(
+            self.hidden_size,
+            self.total_idx_heads * self.idx_head_dim,
+            bias=False,
+            quant_config=None,
+            prefix=f"{prefix}.index_q_proj",
+        )
+        self.index_k_proj = ReplicatedLinear(
+            self.hidden_size,
+            self.idx_head_dim,
+            bias=False,
+            quant_config=None,
+            prefix=f"{prefix}.index_k_proj",
         )
         # reduce_results=False: the attention all-reduce is fused with the
         # following post_attention_layernorm (GemmaRMSNorm) in the decoder layer
@@ -649,9 +675,18 @@ class MiniMaxM3SparseAttention(nn.Module, AttentionLayerBase):
         positions: torch.Tensor,
         hidden_states: torch.Tensor,
     ) -> torch.Tensor:
-        # Single fused projection emitting [q | k | v | index_q | index_k].
+        # q/k/v (possibly quantized) and the bf16 indexer projections are run
+        # separately, then concatenated into the single [q | k | v | index_q |
+        # index_k] buffer the fused kernel below consumes. index_q_proj is
+        # replicated, so slice this rank's KV-aligned head(s); index_k is a
+        # single replicated head used as-is.
         model_stream_dtype = hidden_states.dtype
         qkv, _ = self.qkv_proj(hidden_states)
+        index_q_full, _ = self.index_q_proj(hidden_states)
+        index_k, _ = self.index_k_proj(hidden_states)
+        iq_start = (self.tp_rank // self.num_kv_head_replicas) * self.index_q_size
+        index_q = index_q_full.narrow(-1, iq_start, self.index_q_size)
+        qkv = torch.cat([qkv, index_q, index_k], dim=-1)
         if qkv.dtype == torch.float32:
             qkv = qkv.to(torch.float16)
 
@@ -924,10 +959,9 @@ class MiniMaxM3Model(nn.Module, EagleModelMixin):
 
     def load_weights(self, weights: Iterable[tuple[str, torch.Tensor]]) -> set[str]:
         # q/k/v_proj -> fused qkv_proj; gate_proj/up_proj -> fused gate_up_proj
-        # (dense MLP and shared expert). On sparse layers the indexer
-        # index_q/index_k_proj fold into the same fused qkv_proj
-        # (MinimaxM3QKVParallelLinearWithIndexer); these entries simply never match on
-        # dense layers, whose checkpoints have no index_*_proj weights. Leading
+        # (dense MLP and shared expert). The sparse-attention indexer
+        # (index_q/index_k_proj) is NOT fused: it loads directly into the
+        # standalone bf16-fp16 ReplicatedLinear params, so it is absent here. Leading
         # dots keep `q_proj`/`k_proj` from matching `index_q_proj`/`index_k_proj`
         # (preceded by `_`, not `.`).
         stacked_params_mapping: list[tuple[str, str, int | str]] = [
@@ -935,8 +969,6 @@ class MiniMaxM3Model(nn.Module, EagleModelMixin):
             (".qkv_proj", ".q_proj", "q"),
             (".qkv_proj", ".k_proj", "k"),
             (".qkv_proj", ".v_proj", "v"),
-            (".qkv_proj", ".index_q_proj", "index_q"),
-            (".qkv_proj", ".index_k_proj", "index_k"),
             (".gate_up_proj", ".gate_proj", 0),
             (".gate_up_proj", ".up_proj", 1),
         ]
