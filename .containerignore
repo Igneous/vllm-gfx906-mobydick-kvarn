@@ -1,0 +1,10 @@
+.git
+docs
+tests
+benchmarks
+examples
+csrc
+cmake
+.buildkite
+*.png
+**/__pycache__

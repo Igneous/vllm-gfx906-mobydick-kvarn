@@ -1,0 +1,41 @@
+# syntax=docker/dockerfile:1.4
+#
+# Dockerfile.quick — fast KVarN image via OVERLAY (no full source rebuild).
+#
+# The KVarN port adds ONLY pure-Python + Triton (JIT) files to vLLM — no
+# C++/Rust/cmake changes. So instead of the multi-hour triton-gfx906 /
+# flash-attention-gfx906 / vllm wheel rebuild (build_and_push_docker.sh), this
+# drops the patched vllm/ source onto a prebuilt gfx906 mobydick image.
+# `cp -r` MERGES, so the base image's compiled artifacts (vllm/_rust_*.so, csrc
+# .so, triton-gfx906, flash-attention-gfx906) are preserved while our .py files
+# overwrite theirs and the new kvarn modules are added.
+#
+# Build (from this directory = the patched mobydick checkout):
+#   podman build -f Dockerfile.quick -t localhost/vllm-gfx906-mobydick-kvarn:latest .
+#   # docker works too: docker build -f Dockerfile.quick -t vllm-gfx906-mobydick-kvarn:latest .
+#
+# Use the full source build (build_and_push_docker.sh) instead if you need to
+# change C++/Rust/kernels or rebase onto a different base image.
+#
+ARG BASE_IMAGE=docker.io/aiinfos/vllm-gfx906-mobydick:latest
+FROM ${BASE_IMAGE}
+
+# Patched vLLM source from the local build context.
+COPY vllm/ /tmp/kvarn_vllm/
+
+RUN set -eux; \
+    LOC="$(pip show vllm | awk '/^Location:/{print $2}')"; \
+    test -n "$LOC"; \
+    echo "Overlaying KVarN patch onto $LOC/vllm"; \
+    cp -r /tmp/kvarn_vllm/. "$LOC/vllm/"; \
+    rm -rf /tmp/kvarn_vllm; \
+    find "$LOC/vllm" -name '__pycache__' -type d -prune -exec rm -rf {} + || true; \
+    # sanity: the KVARN backend enum and the new modules must be present
+    grep -q "KVARN" "$LOC/vllm/v1/attention/backends/registry.py"; \
+    test -f "$LOC/vllm/v1/attention/backends/kvarn_attn.py"; \
+    test -f "$LOC/vllm/model_executor/layers/quantization/kvarn/config.py"; \
+    echo "KVarN overlay OK"
+
+# Recommended gfx906 runtime env (mirrors the mobydick final stage).
+ENV FLASH_ATTENTION_TRITON_AMD_ENABLE=TRUE \
+    VLLM_LOGGING_LEVEL=INFO
