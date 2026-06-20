@@ -75,6 +75,19 @@ class Gemma4Config(VerifyAndUpdateConfig):
         if head_dim is None or global_head_dim is None or head_dim == global_head_dim:
             return
 
+        # KVarN runs ALL layers itself (per-layer head_size) as a single backend,
+        # so there's no mixed-backend divergence to correct, and it supports
+        # head_size up to 512. Don't override backend selection in that case:
+        # TRITON_ATTN can't do the kvarn cache dtype, and FA4 isn't the kvarn
+        # path either — leave the KVARN backend to be selected normally.
+        _cache_dtype = getattr(vllm_config.cache_config, "cache_dtype", None)
+        if (
+            isinstance(_cache_dtype, str)
+            and _cache_dtype.startswith("kvarn_")
+            and not _cache_dtype.startswith("kvarn_mla")
+        ):
+            return
+
         from vllm.v1.attention.backends.fa_utils import is_fa_version_supported
         from vllm.v1.attention.backends.registry import AttentionBackendEnum
 

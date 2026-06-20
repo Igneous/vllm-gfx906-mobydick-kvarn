@@ -1059,8 +1059,19 @@ def unify_kv_cache_spec_page_size(
                     "maximum page size. Cannot unify by adjusting block_size."
                 )
             ratio = max_page_size // layer_page_size
-            new_block_size = layer_spec.block_size * ratio
-            new_spec = replace(layer_spec, block_size=new_block_size)
+            # KVarN/TQ specs are group-locked: their block_size must equal the
+            # variance-normalization tile size (group=128), so we cannot scale
+            # block_size to grow the page. Instead pad the page via
+            # page_size_padded (the reshape uses a strided view, like MLA), which
+            # keeps block_size fixed. Only safe because the KVarN/TQ kv_cache
+            # shape starts with num_blocks. (Costs the smaller-page layers some
+            # wasted bytes per block, but avoids breaking the group=block_size
+            # invariant the KVarN kernels rely on.)
+            if getattr(layer_spec, "tq_slot_size", 0) > 0:
+                new_spec = replace(layer_spec, page_size_padded=max_page_size)
+            else:
+                new_block_size = layer_spec.block_size * ratio
+                new_spec = replace(layer_spec, block_size=new_block_size)
             assert new_spec.page_size_bytes == max_page_size
             new_kv_cache_spec[layer_name] = new_spec
     return new_kv_cache_spec

@@ -544,6 +544,20 @@ class MLAAttention(nn.Module, AttentionLayerBase):
                 _encode_layer_name(self.layer_name),
             )
 
+        # LOCAL ACCURACY PROBE (env KVARN_MLA_BITS): round-trip the MLA latent
+        # through the FULL KVarN recipe (Hadamard -> Sinkhorn -> asymmetric RTN
+        # -> dequant -> invert). Applied HERE (before do_kv_cache_update) so the
+        # lossy latent is what gets cached -> all attention (prefill + decode,
+        # past + current) sees KVarN-quantized values. No-op unless the env set.
+        from vllm.model_executor.layers.quantization.kvarn.mla_probe import (
+            kvarn_mla_roundtrip,
+            mla_bits,
+        )
+
+        _kvarn_bits = mla_bits()
+        if _kvarn_bits:
+            kv_c_normed = kvarn_mla_roundtrip(kv_c_normed, _kvarn_bits)
+
         if self.use_direct_call:
             forward_context: ForwardContext = get_forward_context()
             attn_metadata_raw = forward_context.attn_metadata
@@ -616,6 +630,10 @@ class MLAAttention(nn.Module, AttentionLayerBase):
         quant_tma_aligned: bool | None = None,
     ) -> torch.Tensor:
         assert output is not None, "Output tensor must be provided."
+
+        # NOTE: the KVarN MLA accuracy probe is applied at the top of forward()
+        # (before do_kv_cache_update) so the cached latent is the lossy one.
+        # It is intentionally NOT re-applied here (would double-quantize).
 
         quant_key = _detect_output_quant_key(
             output, output_scale, output_block_scale, self.num_heads * self.v_head_dim
@@ -961,10 +979,25 @@ class MLAAttention(nn.Module, AttentionLayerBase):
         kv_cache_dtype = kv_cache_dtype_str_to_dtype(
             self.kv_cache_dtype, vllm_config.model_config
         )
+        head_size = self.head_size
+        block_size = vllm_config.cache_config.block_size
+        # KVarN-MLA (full method): the cache stores one PACKED int4 TILE record
+        # per block (128 tokens): Hadamard+Sinkhorn+per-channel-RTN latent +
+        # per-channel scale/zp + per-token s_row + fp16 rope. head_size =
+        # REC/group (uint8) sizes the paged cache to the compressed tile; block
+        # size is forced to the tile group (128). Compute uses kv_lora_rank.
+        if str(self.kv_cache_dtype).startswith("kvarn_"):  # any kvarn_ -> MLA latent tile
+            from vllm.v1.attention.backends.mla.triton_mla import (
+                kvarn_mla_tile_layout,
+            )
+            kv_lora_rank = self.head_size - self.qk_rope_head_dim
+            block_size = 128
+            _, _, _, _, _, _, head_size = kvarn_mla_tile_layout(
+                kv_lora_rank, self.qk_rope_head_dim, block_size, 4)
         return MLAAttentionSpec(
-            block_size=vllm_config.cache_config.block_size,
+            block_size=block_size,
             num_kv_heads=1,
-            head_size=self.head_size,
+            head_size=head_size,
             dtype=kv_cache_dtype,
             cache_dtype_str=vllm_config.cache_config.cache_dtype,
         )
@@ -2054,7 +2087,56 @@ class MLACommonImpl(MLAAttentionImpl[M], Generic[M]):
 
         for i in range(iters):
             toks = prefill_metadata.chunked_context.seq_tot[i]
-            if not use_fp8_prefill:
+            if getattr(self, "_is_kvarn_mla", False):
+                # KVarN-MLA context gather: read each cached context token from
+                # the fp16 tail pool (unflushed block) or dequant it from the
+                # per-block int4 TILE record (flushed block) into the workspace.
+                # Both sources hold the latent ROTATED (c @ H), so un-rotate
+                # after the gather to recover kv_c_normed for kv_b_proj. (The
+                # old gather read the cache with the legacy per-token record
+                # layout — the wrong format for the tile method — and knew
+                # nothing of the pool.)
+                from vllm.v1.attention.backends.mla.triton_mla import (
+                    _kvarn_mla_gather_dequant_kernel,
+                    kvarn_mla_tile_layout,
+                )
+                assert self._kvarn_bits == 4, "tile gather assumes 4-bit latent"
+                G = self._kvarn_group
+                NB, SC, ZP, SR, RPo, REC, _hs = kvarn_mla_tile_layout(
+                    self.kv_lora_rank, self.qk_rope_head_dim, G,
+                    self._kvarn_bits)
+                ntok = int(prefill_metadata.chunked_context.chunk_total_token[i])
+                bt = prefill_metadata.block_table
+                ws2d = workspace.view(workspace.shape[0], -1)
+                if ntok > 0:
+                    if self._kvarn_lat_pool is None:
+                        # Defensive: the metadata builder normally allocates
+                        # the pool before any forward runs.
+                        self._ensure_kvarn_pool(
+                            ws2d.device, kv_c_and_k_pe_cache.shape[0])
+                    b2s = type(self)._kvarn_b2slot_t[ws2d.device]
+                    cache_flat = kv_c_and_k_pe_cache.reshape(-1)
+                    _kvarn_mla_gather_dequant_kernel[(ntok,)](
+                        cache_flat, bt,
+                        prefill_metadata.chunked_context.token_to_seq[i],
+                        prefill_metadata.chunked_context.cu_seq_lens[i],
+                        prefill_metadata.chunked_context.starts[i],
+                        b2s, self._kvarn_lat_pool, self._kvarn_rope_pool,
+                        ws2d, bt.stride(0), ws2d.stride(0),
+                        self._kvarn_lat_pool.stride(0),
+                        self._kvarn_lat_pool.stride(1),
+                        self._kvarn_rope_pool.stride(0),
+                        self._kvarn_rope_pool.stride(1),
+                        L=self.kv_lora_rank, RP=self.qk_rope_head_dim, G=G,
+                        REC=REC, SC_OFF=SC, ZP_OFF=ZP, SR_OFF=SR, RP_OFF=RPo,
+                        NUM_BLOCKS_LOOKUP=b2s.shape[0],
+                    )
+                    Hb = self._kvarn_hadamard_act(
+                        self.kv_lora_rank, ws2d.device, ws2d.dtype)
+                    lat_view = ws2d[:ntok, : self.kv_lora_rank]
+                    lat_view.copy_(
+                        (lat_view.to(Hb.dtype) @ Hb.t()).to(ws2d.dtype))
+            elif not use_fp8_prefill:
                 ops.gather_and_maybe_dequant_cache(
                     src_cache=kv_c_and_k_pe_cache,
                     dst=workspace,
