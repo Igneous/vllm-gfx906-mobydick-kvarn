@@ -26,6 +26,7 @@ import os
 
 import torch
 
+from vllm.platforms import current_platform
 from vllm.triton_utils import tl, triton
 
 # Number of KV-sequence splits for the split-K flash-decoding kernel. More
@@ -46,10 +47,17 @@ KVARN_MAX_KV_SPLITS = 64  # cap of the context-adaptive schedule below
 _DECODE_AUTOTUNE_CONFIGS = [
     triton.Config({"BLOCK_N": bn}, num_warps=nw, num_stages=ns)
     for bn in (16, 32, 64) for nw in (2, 4) for ns in (1, 2)
-] + [
-    triton.Config({"BLOCK_N": 32}, num_warps=4, num_stages=2, maxnreg=mr)
-    for mr in (64, 96)
 ]
+# The `maxnreg` register-cap configs are an NVIDIA-only perf knob: the gfx906
+# (AMD/ROCm) Triton backend rejects `maxnreg` at kernel launch ("Keyword
+# argument maxnreg was specified but unrecognised") because AMD has no
+# equivalent launch-time register cap. Add them only off-ROCm; gfx906 perf
+# re-tuning of this autotune space is a separate pass.
+if not current_platform.is_rocm():
+    _DECODE_AUTOTUNE_CONFIGS += [
+        triton.Config({"BLOCK_N": 32}, num_warps=4, num_stages=2, maxnreg=mr)
+        for mr in (64, 96)
+    ]
 
 
 def adaptive_num_kv_splits(max_blocks_per_req: int) -> int:
