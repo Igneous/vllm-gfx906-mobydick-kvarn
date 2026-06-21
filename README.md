@@ -122,6 +122,70 @@ GDN/linear-attn and ViT kernels).
   profiler doesn't over-reserve and shrink the KV pool. (On ROCm the cudagraph estimate
   is 0 anyway, so this is harmless.)
 
+### Measured: capacity vs throughput (Qwen3-4B, MI50 16 GB)
+
+A concurrency × context sweep on one **MI50 (gfx906, 16 GB)** serving
+**`Qwen/Qwen3-4B`** (dense, fp16 weights, head_dim 128 — KVarN's best case: every
+layer compressed, no weight-dequant), `--gpu-memory-utilization 0.92`,
+`--max-model-len 32768`, 256-token decodes. A cell is **OOM** when
+`concurrency × context` exceeds the measured KV-cache capacity for that dtype;
+green cells show throughput. Reproduce with
+[`benchmarks/kvarn_capacity_bench.py`](benchmarks/kvarn_capacity_bench.py) (raw
+numbers in [`kvarn_grid_qwen3-4b.csv`](benchmarks/kvarn_grid_qwen3-4b.csv)).
+
+> **Metric caveat (read this):** the per-cell number is **end-to-end aggregate
+> output throughput** = `Σ output_tokens / wall`, and the wall **includes the
+> prompt prefill**. With only 256 output tokens and an input ≈ the full context,
+> the high-context cells are *prefill-bound* — the 32k column collapsing to ~2–3
+> tok/s is the cost of prefilling 32k tokens amortized over a short decode, **not**
+> a 10× decode slowdown. A proper **pp / tg** (prompt-processing vs
+> token-generation) breakdown will replace these values; the **green/OOM capacity
+> frontier is unaffected** and is the real result here.
+
+<p align="center">
+  <img src="benchmarks/kvarn_grid_qwen3-4b.svg" alt="KVarN vs fp16 KV: concurrency x context grid on MI50" width="960">
+</p>
+
+| fp16 KV — conc \ ctx | 2k | 4k | 8k | 16k | 32k |
+|---|---|---|---|---|---|
+| **1**  | 38.2 | 27.9 | 15.7 | 6.6 | 2.2 |
+| **2**  | 32.0 | 24.2 | 12.8 | 5.0 | OOM |
+| **4**  | 47.1 | 30.5 | 13.5 | OOM | OOM |
+| **8**  | 56.7 | 35.0 | OOM | OOM | OOM |
+| **16** | 72.2 | OOM  | OOM | OOM | OOM |
+| **32** | OOM  | OOM  | OOM | OOM | OOM |
+
+| KVarN `k4v2_g128` — conc \ ctx | 2k | 4k | 8k | 16k | 32k |
+|---|---|---|---|---|---|
+| **1**  | 30.7 | 23.4 | 14.5 | 7.3 | 2.9 |
+| **2**  | 30.6 | 22.0 | 12.7 | 5.9 | **2.2** |
+| **4**  | 44.7 | 26.3 | 13.6 | **5.4** | OOM |
+| **8**  | 38.5 | 24.1 | **11.6** | OOM | OOM |
+| **16** | 50.2 | **26.8** | OOM | OOM | OOM |
+| **32** | **60.8** | OOM | OOM | OOM | OOM |
+
+(values = end-to-end aggregate output tok/s; **bold** = configs fp16 KV OOMs on this card)
+
+**What this shows — capacity up, throughput down, exactly as expected on gfx906:**
+
+- **KV-cache capacity ~2.9×.** Measured KV pool: fp16 **44,032 tokens** (6.05 GiB)
+  vs KVarN **129,664 tokens** (3.76 GiB). Per token, KVarN is **4.7× cheaper**
+  (147,456 → 31,150 B/tok — the full k4v2 ratio); the *net* lands at 2.9× only
+  because KVarN's fixed fp16 working set (~2.3 GiB: per-layer tail pool +
+  split-K/fp32 scratch) is a large slice of a 16 GB card. That tax scales with
+  `--max-num-seqs`, **not** context, so it amortizes toward the full ~4.7× on
+  bigger cards (or with lower `--max-num-seqs`).
+- **KVarN runs configs fp16 can't:** 2 conc @ 32k, 4 @ 16k, 8 @ 8k, 16 @ 4k,
+  32 @ 2k — all OOM under fp16 KV on this card. The whole green frontier shifts
+  out one notch in both axes.
+- **But it's slower where both fit:** ~0.7× fp16 throughput (8@2k: 56.7 → 38.5),
+  the gfx906 dequant tax (no MFMA → the `tl.dot` + Hadamard/Sinkhorn/dequant runs
+  the FMA path). Absolute tok/s is low across the board — this is a 16 GB Vega20.
+
+Bottom line: on gfx906, KVarN buys **context capacity at the cost of decode speed**.
+Reach for it when you're KV-bound (need more concurrent context than fp16 fits) and
+can trade throughput; if your KV already fits, fp16 KV is faster.
+
 ---
 
 ## Mini Install Guide for GFX906

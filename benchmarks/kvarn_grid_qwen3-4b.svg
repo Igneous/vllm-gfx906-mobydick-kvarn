@@ -1,0 +1,188 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1286" height="442" font-family="-apple-system,Segoe UI,Roboto,sans-serif">
+<rect width="1286" height="442" fill="#ffffff"/>
+<text x="321.0" y="37.0" font-size="16" fill="#111" font-weight="bold" text-anchor="middle" dominant-baseline="middle">fp16  (qwen3-4b)</text>
+<text x="61.0" y="70.0" font-size="11" fill="#666" font-weight="normal" text-anchor="middle" dominant-baseline="middle">conc \ ctx</text>
+<text x="152.0" y="70.0" font-size="13" fill="#444" font-weight="bold" text-anchor="middle" dominant-baseline="middle">2k tok</text>
+<text x="256.0" y="70.0" font-size="13" fill="#444" font-weight="bold" text-anchor="middle" dominant-baseline="middle">4k tok</text>
+<text x="360.0" y="70.0" font-size="13" fill="#444" font-weight="bold" text-anchor="middle" dominant-baseline="middle">8k tok</text>
+<text x="464.0" y="70.0" font-size="13" fill="#444" font-weight="bold" text-anchor="middle" dominant-baseline="middle">16k tok</text>
+<text x="568.0" y="70.0" font-size="13" fill="#444" font-weight="bold" text-anchor="middle" dominant-baseline="middle">32k tok</text>
+<text x="61.0" y="111.0" font-size="14" fill="#444" font-weight="bold" text-anchor="middle" dominant-baseline="middle">1</text>
+<rect x="102" y="90" width="100" height="42" rx="5" fill="#609763"/>
+<text x="152.0" y="105.0" font-size="15" fill="#ffffff" font-weight="bold" text-anchor="middle" dominant-baseline="middle">38.2</text>
+<text x="152.0" y="120.0" font-size="9" fill="#ffffff" font-weight="normal" text-anchor="middle" dominant-baseline="middle">tok/s</text>
+<rect x="206" y="90" width="100" height="42" rx="5" fill="#75a878"/>
+<text x="256.0" y="105.0" font-size="15" fill="#ffffff" font-weight="bold" text-anchor="middle" dominant-baseline="middle">27.9</text>
+<text x="256.0" y="120.0" font-size="9" fill="#ffffff" font-weight="normal" text-anchor="middle" dominant-baseline="middle">tok/s</text>
+<rect x="310" y="90" width="100" height="42" rx="5" fill="#8ebd90"/>
+<text x="360.0" y="105.0" font-size="15" fill="#ffffff" font-weight="bold" text-anchor="middle" dominant-baseline="middle">15.7</text>
+<text x="360.0" y="120.0" font-size="9" fill="#ffffff" font-weight="normal" text-anchor="middle" dominant-baseline="middle">tok/s</text>
+<rect x="414" y="90" width="100" height="42" rx="5" fill="#a0cca2"/>
+<text x="464.0" y="105.0" font-size="15" fill="#ffffff" font-weight="bold" text-anchor="middle" dominant-baseline="middle">6.6</text>
+<text x="464.0" y="120.0" font-size="9" fill="#ffffff" font-weight="normal" text-anchor="middle" dominant-baseline="middle">tok/s</text>
+<rect x="518" y="90" width="100" height="42" rx="5" fill="#a9d4ab"/>
+<text x="568.0" y="105.0" font-size="15" fill="#ffffff" font-weight="bold" text-anchor="middle" dominant-baseline="middle">2.2</text>
+<text x="568.0" y="120.0" font-size="9" fill="#ffffff" font-weight="normal" text-anchor="middle" dominant-baseline="middle">tok/s</text>
+<text x="61.0" y="157.0" font-size="14" fill="#444" font-weight="bold" text-anchor="middle" dominant-baseline="middle">2</text>
+<rect x="102" y="136" width="100" height="42" rx="5" fill="#6ca170"/>
+<text x="152.0" y="151.0" font-size="15" fill="#ffffff" font-weight="bold" text-anchor="middle" dominant-baseline="middle">32</text>
+<text x="152.0" y="166.0" font-size="9" fill="#ffffff" font-weight="normal" text-anchor="middle" dominant-baseline="middle">tok/s</text>
+<rect x="206" y="136" width="100" height="42" rx="5" fill="#7caf7f"/>
+<text x="256.0" y="151.0" font-size="15" fill="#ffffff" font-weight="bold" text-anchor="middle" dominant-baseline="middle">24.2</text>
+<text x="256.0" y="166.0" font-size="9" fill="#ffffff" font-weight="normal" text-anchor="middle" dominant-baseline="middle">tok/s</text>
+<rect x="310" y="136" width="100" height="42" rx="5" fill="#93c296"/>
+<text x="360.0" y="151.0" font-size="15" fill="#ffffff" font-weight="bold" text-anchor="middle" dominant-baseline="middle">12.8</text>
+<text x="360.0" y="166.0" font-size="9" fill="#ffffff" font-weight="normal" text-anchor="middle" dominant-baseline="middle">tok/s</text>
+<rect x="414" y="136" width="100" height="42" rx="5" fill="#a3cfa6"/>
+<text x="464.0" y="151.0" font-size="15" fill="#ffffff" font-weight="bold" text-anchor="middle" dominant-baseline="middle">5</text>
+<text x="464.0" y="166.0" font-size="9" fill="#ffffff" font-weight="normal" text-anchor="middle" dominant-baseline="middle">tok/s</text>
+<rect x="518" y="136" width="100" height="42" rx="5" fill="#e53935"/>
+<text x="568.0" y="157.0" font-size="14" fill="#ffffff" font-weight="bold" text-anchor="middle" dominant-baseline="middle">OOM</text>
+<text x="61.0" y="203.0" font-size="14" fill="#444" font-weight="bold" text-anchor="middle" dominant-baseline="middle">4</text>
+<rect x="102" y="182" width="100" height="42" rx="5" fill="#4e8852"/>
+<text x="152.0" y="197.0" font-size="15" fill="#ffffff" font-weight="bold" text-anchor="middle" dominant-baseline="middle">47.1</text>
+<text x="152.0" y="212.0" font-size="9" fill="#ffffff" font-weight="normal" text-anchor="middle" dominant-baseline="middle">tok/s</text>
+<rect x="206" y="182" width="100" height="42" rx="5" fill="#6fa473"/>
+<text x="256.0" y="197.0" font-size="15" fill="#ffffff" font-weight="bold" text-anchor="middle" dominant-baseline="middle">30.5</text>
+<text x="256.0" y="212.0" font-size="9" fill="#ffffff" font-weight="normal" text-anchor="middle" dominant-baseline="middle">tok/s</text>
+<rect x="310" y="182" width="100" height="42" rx="5" fill="#92c195"/>
+<text x="360.0" y="197.0" font-size="15" fill="#ffffff" font-weight="bold" text-anchor="middle" dominant-baseline="middle">13.5</text>
+<text x="360.0" y="212.0" font-size="9" fill="#ffffff" font-weight="normal" text-anchor="middle" dominant-baseline="middle">tok/s</text>
+<rect x="414" y="182" width="100" height="42" rx="5" fill="#e53935"/>
+<text x="464.0" y="203.0" font-size="14" fill="#ffffff" font-weight="bold" text-anchor="middle" dominant-baseline="middle">OOM</text>
+<rect x="518" y="182" width="100" height="42" rx="5" fill="#e53935"/>
+<text x="568.0" y="203.0" font-size="14" fill="#ffffff" font-weight="bold" text-anchor="middle" dominant-baseline="middle">OOM</text>
+<text x="61.0" y="249.0" font-size="14" fill="#444" font-weight="bold" text-anchor="middle" dominant-baseline="middle">8</text>
+<rect x="102" y="228" width="100" height="42" rx="5" fill="#3a783e"/>
+<text x="152.0" y="243.0" font-size="15" fill="#ffffff" font-weight="bold" text-anchor="middle" dominant-baseline="middle">56.7</text>
+<text x="152.0" y="258.0" font-size="9" fill="#ffffff" font-weight="normal" text-anchor="middle" dominant-baseline="middle">tok/s</text>
+<rect x="206" y="228" width="100" height="42" rx="5" fill="#669c6a"/>
+<text x="256.0" y="243.0" font-size="15" fill="#ffffff" font-weight="bold" text-anchor="middle" dominant-baseline="middle">35</text>
+<text x="256.0" y="258.0" font-size="9" fill="#ffffff" font-weight="normal" text-anchor="middle" dominant-baseline="middle">tok/s</text>
+<rect x="310" y="228" width="100" height="42" rx="5" fill="#e53935"/>
+<text x="360.0" y="249.0" font-size="14" fill="#ffffff" font-weight="bold" text-anchor="middle" dominant-baseline="middle">OOM</text>
+<rect x="414" y="228" width="100" height="42" rx="5" fill="#e53935"/>
+<text x="464.0" y="249.0" font-size="14" fill="#ffffff" font-weight="bold" text-anchor="middle" dominant-baseline="middle">OOM</text>
+<rect x="518" y="228" width="100" height="42" rx="5" fill="#e53935"/>
+<text x="568.0" y="249.0" font-size="14" fill="#ffffff" font-weight="bold" text-anchor="middle" dominant-baseline="middle">OOM</text>
+<text x="61.0" y="295.0" font-size="14" fill="#444" font-weight="bold" text-anchor="middle" dominant-baseline="middle">16</text>
+<rect x="102" y="274" width="100" height="42" rx="5" fill="#1b5e20"/>
+<text x="152.0" y="289.0" font-size="15" fill="#ffffff" font-weight="bold" text-anchor="middle" dominant-baseline="middle">72.2</text>
+<text x="152.0" y="304.0" font-size="9" fill="#ffffff" font-weight="normal" text-anchor="middle" dominant-baseline="middle">tok/s</text>
+<rect x="206" y="274" width="100" height="42" rx="5" fill="#e53935"/>
+<text x="256.0" y="295.0" font-size="14" fill="#ffffff" font-weight="bold" text-anchor="middle" dominant-baseline="middle">OOM</text>
+<rect x="310" y="274" width="100" height="42" rx="5" fill="#e53935"/>
+<text x="360.0" y="295.0" font-size="14" fill="#ffffff" font-weight="bold" text-anchor="middle" dominant-baseline="middle">OOM</text>
+<rect x="414" y="274" width="100" height="42" rx="5" fill="#e53935"/>
+<text x="464.0" y="295.0" font-size="14" fill="#ffffff" font-weight="bold" text-anchor="middle" dominant-baseline="middle">OOM</text>
+<rect x="518" y="274" width="100" height="42" rx="5" fill="#e53935"/>
+<text x="568.0" y="295.0" font-size="14" fill="#ffffff" font-weight="bold" text-anchor="middle" dominant-baseline="middle">OOM</text>
+<text x="61.0" y="341.0" font-size="14" fill="#444" font-weight="bold" text-anchor="middle" dominant-baseline="middle">32</text>
+<rect x="102" y="320" width="100" height="42" rx="5" fill="#e53935"/>
+<text x="152.0" y="341.0" font-size="14" fill="#ffffff" font-weight="bold" text-anchor="middle" dominant-baseline="middle">OOM</text>
+<rect x="206" y="320" width="100" height="42" rx="5" fill="#e53935"/>
+<text x="256.0" y="341.0" font-size="14" fill="#ffffff" font-weight="bold" text-anchor="middle" dominant-baseline="middle">OOM</text>
+<rect x="310" y="320" width="100" height="42" rx="5" fill="#e53935"/>
+<text x="360.0" y="341.0" font-size="14" fill="#ffffff" font-weight="bold" text-anchor="middle" dominant-baseline="middle">OOM</text>
+<rect x="414" y="320" width="100" height="42" rx="5" fill="#e53935"/>
+<text x="464.0" y="341.0" font-size="14" fill="#ffffff" font-weight="bold" text-anchor="middle" dominant-baseline="middle">OOM</text>
+<rect x="518" y="320" width="100" height="42" rx="5" fill="#e53935"/>
+<text x="568.0" y="341.0" font-size="14" fill="#ffffff" font-weight="bold" text-anchor="middle" dominant-baseline="middle">OOM</text>
+<text x="965.0" y="37.0" font-size="16" fill="#111" font-weight="bold" text-anchor="middle" dominant-baseline="middle">kvarn  (qwen3-4b)</text>
+<text x="705.0" y="70.0" font-size="11" fill="#666" font-weight="normal" text-anchor="middle" dominant-baseline="middle">conc \ ctx</text>
+<text x="796.0" y="70.0" font-size="13" fill="#444" font-weight="bold" text-anchor="middle" dominant-baseline="middle">2k tok</text>
+<text x="900.0" y="70.0" font-size="13" fill="#444" font-weight="bold" text-anchor="middle" dominant-baseline="middle">4k tok</text>
+<text x="1004.0" y="70.0" font-size="13" fill="#444" font-weight="bold" text-anchor="middle" dominant-baseline="middle">8k tok</text>
+<text x="1108.0" y="70.0" font-size="13" fill="#444" font-weight="bold" text-anchor="middle" dominant-baseline="middle">16k tok</text>
+<text x="1212.0" y="70.0" font-size="13" fill="#444" font-weight="bold" text-anchor="middle" dominant-baseline="middle">32k tok</text>
+<text x="705.0" y="111.0" font-size="14" fill="#444" font-weight="bold" text-anchor="middle" dominant-baseline="middle">1</text>
+<rect x="746" y="90" width="100" height="42" rx="5" fill="#6fa472"/>
+<text x="796.0" y="105.0" font-size="15" fill="#ffffff" font-weight="bold" text-anchor="middle" dominant-baseline="middle">30.7</text>
+<text x="796.0" y="120.0" font-size="9" fill="#ffffff" font-weight="normal" text-anchor="middle" dominant-baseline="middle">tok/s</text>
+<rect x="850" y="90" width="100" height="42" rx="5" fill="#7eb081"/>
+<text x="900.0" y="105.0" font-size="15" fill="#ffffff" font-weight="bold" text-anchor="middle" dominant-baseline="middle">23.4</text>
+<text x="900.0" y="120.0" font-size="9" fill="#ffffff" font-weight="normal" text-anchor="middle" dominant-baseline="middle">tok/s</text>
+<rect x="954" y="90" width="100" height="42" rx="5" fill="#90bf93"/>
+<text x="1004.0" y="105.0" font-size="15" fill="#ffffff" font-weight="bold" text-anchor="middle" dominant-baseline="middle">14.5</text>
+<text x="1004.0" y="120.0" font-size="9" fill="#ffffff" font-weight="normal" text-anchor="middle" dominant-baseline="middle">tok/s</text>
+<rect x="1058" y="90" width="100" height="42" rx="5" fill="#9fcba1"/>
+<text x="1108.0" y="105.0" font-size="15" fill="#ffffff" font-weight="bold" text-anchor="middle" dominant-baseline="middle">7.3</text>
+<text x="1108.0" y="120.0" font-size="9" fill="#ffffff" font-weight="normal" text-anchor="middle" dominant-baseline="middle">tok/s</text>
+<rect x="1162" y="90" width="100" height="42" rx="5" fill="#a8d3aa"/>
+<text x="1212.0" y="105.0" font-size="15" fill="#ffffff" font-weight="bold" text-anchor="middle" dominant-baseline="middle">2.9</text>
+<text x="1212.0" y="120.0" font-size="9" fill="#ffffff" font-weight="normal" text-anchor="middle" dominant-baseline="middle">tok/s</text>
+<text x="705.0" y="157.0" font-size="14" fill="#444" font-weight="bold" text-anchor="middle" dominant-baseline="middle">2</text>
+<rect x="746" y="136" width="100" height="42" rx="5" fill="#6fa472"/>
+<text x="796.0" y="151.0" font-size="15" fill="#ffffff" font-weight="bold" text-anchor="middle" dominant-baseline="middle">30.6</text>
+<text x="796.0" y="166.0" font-size="9" fill="#ffffff" font-weight="normal" text-anchor="middle" dominant-baseline="middle">tok/s</text>
+<rect x="850" y="136" width="100" height="42" rx="5" fill="#81b284"/>
+<text x="900.0" y="151.0" font-size="15" fill="#ffffff" font-weight="bold" text-anchor="middle" dominant-baseline="middle">22</text>
+<text x="900.0" y="166.0" font-size="9" fill="#ffffff" font-weight="normal" text-anchor="middle" dominant-baseline="middle">tok/s</text>
+<rect x="954" y="136" width="100" height="42" rx="5" fill="#94c296"/>
+<text x="1004.0" y="151.0" font-size="15" fill="#ffffff" font-weight="bold" text-anchor="middle" dominant-baseline="middle">12.7</text>
+<text x="1004.0" y="166.0" font-size="9" fill="#ffffff" font-weight="normal" text-anchor="middle" dominant-baseline="middle">tok/s</text>
+<rect x="1058" y="136" width="100" height="42" rx="5" fill="#a1cea4"/>
+<text x="1108.0" y="151.0" font-size="15" fill="#ffffff" font-weight="bold" text-anchor="middle" dominant-baseline="middle">5.9</text>
+<text x="1108.0" y="166.0" font-size="9" fill="#ffffff" font-weight="normal" text-anchor="middle" dominant-baseline="middle">tok/s</text>
+<rect x="1162" y="136" width="100" height="42" rx="5" fill="#a9d4ab"/>
+<text x="1212.0" y="151.0" font-size="15" fill="#ffffff" font-weight="bold" text-anchor="middle" dominant-baseline="middle">2.2</text>
+<text x="1212.0" y="166.0" font-size="9" fill="#ffffff" font-weight="normal" text-anchor="middle" dominant-baseline="middle">tok/s</text>
+<text x="705.0" y="203.0" font-size="14" fill="#444" font-weight="bold" text-anchor="middle" dominant-baseline="middle">4</text>
+<rect x="746" y="182" width="100" height="42" rx="5" fill="#528c56"/>
+<text x="796.0" y="197.0" font-size="15" fill="#ffffff" font-weight="bold" text-anchor="middle" dominant-baseline="middle">44.7</text>
+<text x="796.0" y="212.0" font-size="9" fill="#ffffff" font-weight="normal" text-anchor="middle" dominant-baseline="middle">tok/s</text>
+<rect x="850" y="182" width="100" height="42" rx="5" fill="#78ab7b"/>
+<text x="900.0" y="197.0" font-size="15" fill="#ffffff" font-weight="bold" text-anchor="middle" dominant-baseline="middle">26.3</text>
+<text x="900.0" y="212.0" font-size="9" fill="#ffffff" font-weight="normal" text-anchor="middle" dominant-baseline="middle">tok/s</text>
+<rect x="954" y="182" width="100" height="42" rx="5" fill="#92c194"/>
+<text x="1004.0" y="197.0" font-size="15" fill="#ffffff" font-weight="bold" text-anchor="middle" dominant-baseline="middle">13.6</text>
+<text x="1004.0" y="212.0" font-size="9" fill="#ffffff" font-weight="normal" text-anchor="middle" dominant-baseline="middle">tok/s</text>
+<rect x="1058" y="182" width="100" height="42" rx="5" fill="#a3cea5"/>
+<text x="1108.0" y="197.0" font-size="15" fill="#ffffff" font-weight="bold" text-anchor="middle" dominant-baseline="middle">5.4</text>
+<text x="1108.0" y="212.0" font-size="9" fill="#ffffff" font-weight="normal" text-anchor="middle" dominant-baseline="middle">tok/s</text>
+<rect x="1162" y="182" width="100" height="42" rx="5" fill="#e53935"/>
+<text x="1212.0" y="203.0" font-size="14" fill="#ffffff" font-weight="bold" text-anchor="middle" dominant-baseline="middle">OOM</text>
+<text x="705.0" y="249.0" font-size="14" fill="#444" font-weight="bold" text-anchor="middle" dominant-baseline="middle">8</text>
+<rect x="746" y="228" width="100" height="42" rx="5" fill="#5f9663"/>
+<text x="796.0" y="243.0" font-size="15" fill="#ffffff" font-weight="bold" text-anchor="middle" dominant-baseline="middle">38.5</text>
+<text x="796.0" y="258.0" font-size="9" fill="#ffffff" font-weight="normal" text-anchor="middle" dominant-baseline="middle">tok/s</text>
+<rect x="850" y="228" width="100" height="42" rx="5" fill="#7caf7f"/>
+<text x="900.0" y="243.0" font-size="15" fill="#ffffff" font-weight="bold" text-anchor="middle" dominant-baseline="middle">24.1</text>
+<text x="900.0" y="258.0" font-size="9" fill="#ffffff" font-weight="normal" text-anchor="middle" dominant-baseline="middle">tok/s</text>
+<rect x="954" y="228" width="100" height="42" rx="5" fill="#96c498"/>
+<text x="1004.0" y="243.0" font-size="15" fill="#ffffff" font-weight="bold" text-anchor="middle" dominant-baseline="middle">11.6</text>
+<text x="1004.0" y="258.0" font-size="9" fill="#ffffff" font-weight="normal" text-anchor="middle" dominant-baseline="middle">tok/s</text>
+<rect x="1058" y="228" width="100" height="42" rx="5" fill="#e53935"/>
+<text x="1108.0" y="249.0" font-size="14" fill="#ffffff" font-weight="bold" text-anchor="middle" dominant-baseline="middle">OOM</text>
+<rect x="1162" y="228" width="100" height="42" rx="5" fill="#e53935"/>
+<text x="1212.0" y="249.0" font-size="14" fill="#ffffff" font-weight="bold" text-anchor="middle" dominant-baseline="middle">OOM</text>
+<text x="705.0" y="295.0" font-size="14" fill="#444" font-weight="bold" text-anchor="middle" dominant-baseline="middle">16</text>
+<rect x="746" y="274" width="100" height="42" rx="5" fill="#47834b"/>
+<text x="796.0" y="289.0" font-size="15" fill="#ffffff" font-weight="bold" text-anchor="middle" dominant-baseline="middle">50.2</text>
+<text x="796.0" y="304.0" font-size="9" fill="#ffffff" font-weight="normal" text-anchor="middle" dominant-baseline="middle">tok/s</text>
+<rect x="850" y="274" width="100" height="42" rx="5" fill="#77aa7a"/>
+<text x="900.0" y="289.0" font-size="15" fill="#ffffff" font-weight="bold" text-anchor="middle" dominant-baseline="middle">26.8</text>
+<text x="900.0" y="304.0" font-size="9" fill="#ffffff" font-weight="normal" text-anchor="middle" dominant-baseline="middle">tok/s</text>
+<rect x="954" y="274" width="100" height="42" rx="5" fill="#e53935"/>
+<text x="1004.0" y="295.0" font-size="14" fill="#ffffff" font-weight="bold" text-anchor="middle" dominant-baseline="middle">OOM</text>
+<rect x="1058" y="274" width="100" height="42" rx="5" fill="#e53935"/>
+<text x="1108.0" y="295.0" font-size="14" fill="#ffffff" font-weight="bold" text-anchor="middle" dominant-baseline="middle">OOM</text>
+<rect x="1162" y="274" width="100" height="42" rx="5" fill="#e53935"/>
+<text x="1212.0" y="295.0" font-size="14" fill="#ffffff" font-weight="bold" text-anchor="middle" dominant-baseline="middle">OOM</text>
+<text x="705.0" y="341.0" font-size="14" fill="#444" font-weight="bold" text-anchor="middle" dominant-baseline="middle">32</text>
+<rect x="746" y="320" width="100" height="42" rx="5" fill="#327136"/>
+<text x="796.0" y="335.0" font-size="15" fill="#ffffff" font-weight="bold" text-anchor="middle" dominant-baseline="middle">60.8</text>
+<text x="796.0" y="350.0" font-size="9" fill="#ffffff" font-weight="normal" text-anchor="middle" dominant-baseline="middle">tok/s</text>
+<rect x="850" y="320" width="100" height="42" rx="5" fill="#e53935"/>
+<text x="900.0" y="341.0" font-size="14" fill="#ffffff" font-weight="bold" text-anchor="middle" dominant-baseline="middle">OOM</text>
+<rect x="954" y="320" width="100" height="42" rx="5" fill="#e53935"/>
+<text x="1004.0" y="341.0" font-size="14" fill="#ffffff" font-weight="bold" text-anchor="middle" dominant-baseline="middle">OOM</text>
+<rect x="1058" y="320" width="100" height="42" rx="5" fill="#e53935"/>
+<text x="1108.0" y="341.0" font-size="14" fill="#ffffff" font-weight="bold" text-anchor="middle" dominant-baseline="middle">OOM</text>
+<rect x="1162" y="320" width="100" height="42" rx="5" fill="#e53935"/>
+<text x="1212.0" y="341.0" font-size="14" fill="#ffffff" font-weight="bold" text-anchor="middle" dominant-baseline="middle">OOM</text>
+<rect x="22" y="390" width="16" height="16" rx="3" fill="#1b5e20"/>
+<text x="46" y="398" font-size="12" fill="#444" font-weight="normal" text-anchor="start" dominant-baseline="middle">ran (aggregate output tok/s; darker = faster)</text>
+<rect x="352" y="390" width="16" height="16" rx="3" fill="#e53935"/>
+<text x="376" y="398" font-size="12" fill="#444" font-weight="normal" text-anchor="start" dominant-baseline="middle">OOM / KV working set won't fit</text>
+</svg>

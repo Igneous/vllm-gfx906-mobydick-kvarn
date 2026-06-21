@@ -1,0 +1,61 @@
+label,concurrency,context,status,tok_s,completed,failed,p50_lat_s,p99_lat_s,out_tokens,elapsed_s,reason
+fp16,8,2048,ok,56.7,16,0,38.1,47.0,4096,72.2,
+fp16,16,2048,ok,72.2,32,0,61.2,82.6,8192,113.4,
+fp16,32,2048,OOM,,,,,,,,working set 65536 tok > KV pool 44032 tok
+fp16,8,4096,ok,35.0,16,0,60.6,81.2,4096,117.0,
+fp16,16,4096,OOM,,,,,,,,working set 65536 tok > KV pool 44032 tok
+fp16,32,4096,OOM,,,,,,,,working set 131072 tok > KV pool 44032 tok
+fp16,8,8192,OOM,,,,,,,,working set 65536 tok > KV pool 44032 tok
+fp16,16,8192,OOM,,,,,,,,working set 131072 tok > KV pool 44032 tok
+fp16,32,8192,OOM,,,,,,,,working set 262144 tok > KV pool 44032 tok
+fp16,8,16384,OOM,,,,,,,,working set 131072 tok > KV pool 44032 tok
+fp16,16,16384,OOM,,,,,,,,working set 262144 tok > KV pool 44032 tok
+fp16,32,16384,OOM,,,,,,,,working set 524288 tok > KV pool 44032 tok
+fp16,8,32768,OOM,,,,,,,,working set 262144 tok > KV pool 44032 tok
+fp16,16,32768,OOM,,,,,,,,working set 524288 tok > KV pool 44032 tok
+fp16,32,32768,OOM,,,,,,,,working set 1048576 tok > KV pool 44032 tok
+fp16,1,2048,ok,38.2,2,0,7.5,7.5,512,13.4,
+fp16,2,2048,ok,32.0,4,0,16.2,16.2,1024,32.0,
+fp16,4,2048,ok,47.1,8,0,22.9,22.9,2048,43.5,
+fp16,1,4096,ok,27.9,2,0,11.5,11.5,512,18.3,
+fp16,2,4096,ok,24.2,4,0,23.5,23.5,1024,42.4,
+fp16,4,4096,ok,30.5,8,0,35.8,36.0,2048,67.1,
+fp16,1,8192,ok,15.7,2,0,23.8,23.8,512,32.5,
+fp16,2,8192,ok,12.8,4,0,42.2,47.5,1024,79.8,
+fp16,4,8192,ok,13.5,8,0,77.9,89.2,2048,151.4,
+fp16,1,16384,ok,6.6,2,0,65.0,65.0,512,77.5,
+fp16,2,16384,ok,5.0,4,0,108.2,128.4,1024,204.3,
+fp16,4,16384,OOM,,,,,,,,working set 65536 tok > KV pool 44032 tok
+fp16,1,32768,ok,2.2,2,0,214.2,214.2,512,234.1,
+fp16,2,32768,OOM,,,,,,,,working set 65536 tok > KV pool 44032 tok
+fp16,4,32768,OOM,,,,,,,,working set 131072 tok > KV pool 44032 tok
+kvarn,8,2048,ok,38.5,16,0,57.9,68.4,4096,106.4,
+kvarn,16,2048,ok,50.2,32,0,85.7,115.0,8192,163.1,
+kvarn,32,2048,ok,60.8,64,0,133.0,193.9,16384,269.5,
+kvarn,8,4096,ok,24.1,16,0,85.2,109.8,4096,169.6,
+kvarn,16,4096,ok,26.8,32,0,151.4,223.0,8192,305.2,
+kvarn,32,4096,OOM,,,,,,,,working set 131072 tok > KV pool 129664 tok
+kvarn,8,8192,ok,11.6,16,0,177.3,257.2,4096,352.2,
+kvarn,16,8192,OOM,,,,,,,,working set 131072 tok > KV pool 129664 tok
+kvarn,32,8192,OOM,,,,,,,,working set 262144 tok > KV pool 129664 tok
+kvarn,8,16384,OOM,,,,,,,,working set 131072 tok > KV pool 129664 tok
+kvarn,16,16384,OOM,,,,,,,,working set 262144 tok > KV pool 129664 tok
+kvarn,32,16384,OOM,,,,,,,,working set 524288 tok > KV pool 129664 tok
+kvarn,8,32768,OOM,,,,,,,,working set 262144 tok > KV pool 129664 tok
+kvarn,16,32768,OOM,,,,,,,,working set 524288 tok > KV pool 129664 tok
+kvarn,32,32768,OOM,,,,,,,,working set 1048576 tok > KV pool 129664 tok
+kvarn,1,2048,ok,30.7,2,0,8.6,8.6,512,16.7,
+kvarn,2,2048,ok,30.6,4,0,17.2,17.2,1024,33.4,
+kvarn,4,2048,ok,44.7,8,0,23.5,23.7,2048,45.8,
+kvarn,1,4096,ok,23.4,2,0,12.5,12.5,512,21.9,
+kvarn,2,4096,ok,22.0,4,0,23.4,24.8,1024,46.6,
+kvarn,4,4096,ok,26.3,8,0,39.2,43.0,2048,77.9,
+kvarn,1,8192,ok,14.5,2,0,22.6,22.6,512,35.3,
+kvarn,2,8192,ok,12.7,4,0,42.7,46.1,1024,80.4,
+kvarn,4,8192,ok,13.6,8,0,78.8,101.6,2048,150.5,
+kvarn,1,16384,ok,7.3,2,0,50.8,50.8,512,70.1,
+kvarn,2,16384,ok,5.9,4,0,101.1,103.4,1024,174.6,
+kvarn,4,16384,ok,5.4,8,0,196.3,235.9,2048,377.5,
+kvarn,1,32768,ok,2.9,2,0,141.9,141.9,512,174.6,
+kvarn,2,32768,ok,2.2,4,0,283.2,285.1,1024,462.1,
+kvarn,4,32768,OOM,,,,,,,,working set 131072 tok > KV pool 129664 tok

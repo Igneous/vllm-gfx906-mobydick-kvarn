@@ -1,0 +1,590 @@
+{
+  "_meta": {
+    "fp16": {
+      "model": "qwen3-4b",
+      "max_model_len": 32768,
+      "output_len": 256,
+      "waves": 2
+    },
+    "kvarn": {
+      "model": "qwen3-4b",
+      "max_model_len": 32768,
+      "output_len": 256,
+      "waves": 2
+    }
+  },
+  "fp16": {
+    "c8_l2048": {
+      "status": "ok",
+      "tok_s": 56.7,
+      "elapsed_s": 72.2,
+      "completed": 16,
+      "failed": 0,
+      "out_tokens": 4096,
+      "p50_lat_s": 38.1,
+      "p99_lat_s": 47.0,
+      "concurrency": 8,
+      "context": 2048
+    },
+    "c16_l2048": {
+      "status": "ok",
+      "tok_s": 72.2,
+      "elapsed_s": 113.4,
+      "completed": 32,
+      "failed": 0,
+      "out_tokens": 8192,
+      "p50_lat_s": 61.2,
+      "p99_lat_s": 82.6,
+      "concurrency": 16,
+      "context": 2048
+    },
+    "c32_l2048": {
+      "status": "OOM",
+      "concurrency": 32,
+      "context": 2048,
+      "reason": "working set 65536 tok > KV pool 44032 tok"
+    },
+    "c8_l4096": {
+      "status": "ok",
+      "tok_s": 35.0,
+      "elapsed_s": 117.0,
+      "completed": 16,
+      "failed": 0,
+      "out_tokens": 4096,
+      "p50_lat_s": 60.6,
+      "p99_lat_s": 81.2,
+      "concurrency": 8,
+      "context": 4096
+    },
+    "c16_l4096": {
+      "status": "OOM",
+      "concurrency": 16,
+      "context": 4096,
+      "reason": "working set 65536 tok > KV pool 44032 tok"
+    },
+    "c32_l4096": {
+      "status": "OOM",
+      "concurrency": 32,
+      "context": 4096,
+      "reason": "working set 131072 tok > KV pool 44032 tok"
+    },
+    "c8_l8192": {
+      "status": "OOM",
+      "concurrency": 8,
+      "context": 8192,
+      "reason": "working set 65536 tok > KV pool 44032 tok"
+    },
+    "c16_l8192": {
+      "status": "OOM",
+      "concurrency": 16,
+      "context": 8192,
+      "reason": "working set 131072 tok > KV pool 44032 tok"
+    },
+    "c32_l8192": {
+      "status": "OOM",
+      "concurrency": 32,
+      "context": 8192,
+      "reason": "working set 262144 tok > KV pool 44032 tok"
+    },
+    "c8_l16384": {
+      "status": "OOM",
+      "concurrency": 8,
+      "context": 16384,
+      "reason": "working set 131072 tok > KV pool 44032 tok"
+    },
+    "c16_l16384": {
+      "status": "OOM",
+      "concurrency": 16,
+      "context": 16384,
+      "reason": "working set 262144 tok > KV pool 44032 tok"
+    },
+    "c32_l16384": {
+      "status": "OOM",
+      "concurrency": 32,
+      "context": 16384,
+      "reason": "working set 524288 tok > KV pool 44032 tok"
+    },
+    "c8_l32768": {
+      "status": "OOM",
+      "concurrency": 8,
+      "context": 32768,
+      "reason": "working set 262144 tok > KV pool 44032 tok"
+    },
+    "c16_l32768": {
+      "status": "OOM",
+      "concurrency": 16,
+      "context": 32768,
+      "reason": "working set 524288 tok > KV pool 44032 tok"
+    },
+    "c32_l32768": {
+      "status": "OOM",
+      "concurrency": 32,
+      "context": 32768,
+      "reason": "working set 1048576 tok > KV pool 44032 tok"
+    },
+    "c1_l2048": {
+      "status": "ok",
+      "tok_s": 38.2,
+      "elapsed_s": 13.4,
+      "completed": 2,
+      "failed": 0,
+      "out_tokens": 512,
+      "p50_lat_s": 7.5,
+      "p99_lat_s": 7.5,
+      "concurrency": 1,
+      "context": 2048
+    },
+    "c2_l2048": {
+      "status": "ok",
+      "tok_s": 32.0,
+      "elapsed_s": 32.0,
+      "completed": 4,
+      "failed": 0,
+      "out_tokens": 1024,
+      "p50_lat_s": 16.2,
+      "p99_lat_s": 16.2,
+      "concurrency": 2,
+      "context": 2048
+    },
+    "c4_l2048": {
+      "status": "ok",
+      "tok_s": 47.1,
+      "elapsed_s": 43.5,
+      "completed": 8,
+      "failed": 0,
+      "out_tokens": 2048,
+      "p50_lat_s": 22.9,
+      "p99_lat_s": 22.9,
+      "concurrency": 4,
+      "context": 2048
+    },
+    "c1_l4096": {
+      "status": "ok",
+      "tok_s": 27.9,
+      "elapsed_s": 18.3,
+      "completed": 2,
+      "failed": 0,
+      "out_tokens": 512,
+      "p50_lat_s": 11.5,
+      "p99_lat_s": 11.5,
+      "concurrency": 1,
+      "context": 4096
+    },
+    "c2_l4096": {
+      "status": "ok",
+      "tok_s": 24.2,
+      "elapsed_s": 42.4,
+      "completed": 4,
+      "failed": 0,
+      "out_tokens": 1024,
+      "p50_lat_s": 23.5,
+      "p99_lat_s": 23.5,
+      "concurrency": 2,
+      "context": 4096
+    },
+    "c4_l4096": {
+      "status": "ok",
+      "tok_s": 30.5,
+      "elapsed_s": 67.1,
+      "completed": 8,
+      "failed": 0,
+      "out_tokens": 2048,
+      "p50_lat_s": 35.8,
+      "p99_lat_s": 36.0,
+      "concurrency": 4,
+      "context": 4096
+    },
+    "c1_l8192": {
+      "status": "ok",
+      "tok_s": 15.7,
+      "elapsed_s": 32.5,
+      "completed": 2,
+      "failed": 0,
+      "out_tokens": 512,
+      "p50_lat_s": 23.8,
+      "p99_lat_s": 23.8,
+      "concurrency": 1,
+      "context": 8192
+    },
+    "c2_l8192": {
+      "status": "ok",
+      "tok_s": 12.8,
+      "elapsed_s": 79.8,
+      "completed": 4,
+      "failed": 0,
+      "out_tokens": 1024,
+      "p50_lat_s": 42.2,
+      "p99_lat_s": 47.5,
+      "concurrency": 2,
+      "context": 8192
+    },
+    "c4_l8192": {
+      "status": "ok",
+      "tok_s": 13.5,
+      "elapsed_s": 151.4,
+      "completed": 8,
+      "failed": 0,
+      "out_tokens": 2048,
+      "p50_lat_s": 77.9,
+      "p99_lat_s": 89.2,
+      "concurrency": 4,
+      "context": 8192
+    },
+    "c1_l16384": {
+      "status": "ok",
+      "tok_s": 6.6,
+      "elapsed_s": 77.5,
+      "completed": 2,
+      "failed": 0,
+      "out_tokens": 512,
+      "p50_lat_s": 65.0,
+      "p99_lat_s": 65.0,
+      "concurrency": 1,
+      "context": 16384
+    },
+    "c2_l16384": {
+      "status": "ok",
+      "tok_s": 5.0,
+      "elapsed_s": 204.3,
+      "completed": 4,
+      "failed": 0,
+      "out_tokens": 1024,
+      "p50_lat_s": 108.2,
+      "p99_lat_s": 128.4,
+      "concurrency": 2,
+      "context": 16384
+    },
+    "c4_l16384": {
+      "status": "OOM",
+      "concurrency": 4,
+      "context": 16384,
+      "reason": "working set 65536 tok > KV pool 44032 tok"
+    },
+    "c1_l32768": {
+      "status": "ok",
+      "tok_s": 2.2,
+      "elapsed_s": 234.1,
+      "completed": 2,
+      "failed": 0,
+      "out_tokens": 512,
+      "p50_lat_s": 214.2,
+      "p99_lat_s": 214.2,
+      "concurrency": 1,
+      "context": 32768
+    },
+    "c2_l32768": {
+      "status": "OOM",
+      "concurrency": 2,
+      "context": 32768,
+      "reason": "working set 65536 tok > KV pool 44032 tok"
+    },
+    "c4_l32768": {
+      "status": "OOM",
+      "concurrency": 4,
+      "context": 32768,
+      "reason": "working set 131072 tok > KV pool 44032 tok"
+    }
+  },
+  "kvarn": {
+    "c8_l2048": {
+      "status": "ok",
+      "tok_s": 38.5,
+      "elapsed_s": 106.4,
+      "completed": 16,
+      "failed": 0,
+      "out_tokens": 4096,
+      "p50_lat_s": 57.9,
+      "p99_lat_s": 68.4,
+      "concurrency": 8,
+      "context": 2048
+    },
+    "c16_l2048": {
+      "status": "ok",
+      "tok_s": 50.2,
+      "elapsed_s": 163.1,
+      "completed": 32,
+      "failed": 0,
+      "out_tokens": 8192,
+      "p50_lat_s": 85.7,
+      "p99_lat_s": 115.0,
+      "concurrency": 16,
+      "context": 2048
+    },
+    "c32_l2048": {
+      "status": "ok",
+      "tok_s": 60.8,
+      "elapsed_s": 269.5,
+      "completed": 64,
+      "failed": 0,
+      "out_tokens": 16384,
+      "p50_lat_s": 133.0,
+      "p99_lat_s": 193.9,
+      "concurrency": 32,
+      "context": 2048
+    },
+    "c8_l4096": {
+      "status": "ok",
+      "tok_s": 24.1,
+      "elapsed_s": 169.6,
+      "completed": 16,
+      "failed": 0,
+      "out_tokens": 4096,
+      "p50_lat_s": 85.2,
+      "p99_lat_s": 109.8,
+      "concurrency": 8,
+      "context": 4096
+    },
+    "c16_l4096": {
+      "status": "ok",
+      "tok_s": 26.8,
+      "elapsed_s": 305.2,
+      "completed": 32,
+      "failed": 0,
+      "out_tokens": 8192,
+      "p50_lat_s": 151.4,
+      "p99_lat_s": 223.0,
+      "concurrency": 16,
+      "context": 4096
+    },
+    "c32_l4096": {
+      "status": "OOM",
+      "concurrency": 32,
+      "context": 4096,
+      "reason": "working set 131072 tok > KV pool 129664 tok"
+    },
+    "c8_l8192": {
+      "status": "ok",
+      "tok_s": 11.6,
+      "elapsed_s": 352.2,
+      "completed": 16,
+      "failed": 0,
+      "out_tokens": 4096,
+      "p50_lat_s": 177.3,
+      "p99_lat_s": 257.2,
+      "concurrency": 8,
+      "context": 8192
+    },
+    "c16_l8192": {
+      "status": "OOM",
+      "concurrency": 16,
+      "context": 8192,
+      "reason": "working set 131072 tok > KV pool 129664 tok"
+    },
+    "c32_l8192": {
+      "status": "OOM",
+      "concurrency": 32,
+      "context": 8192,
+      "reason": "working set 262144 tok > KV pool 129664 tok"
+    },
+    "c8_l16384": {
+      "status": "OOM",
+      "concurrency": 8,
+      "context": 16384,
+      "reason": "working set 131072 tok > KV pool 129664 tok"
+    },
+    "c16_l16384": {
+      "status": "OOM",
+      "concurrency": 16,
+      "context": 16384,
+      "reason": "working set 262144 tok > KV pool 129664 tok"
+    },
+    "c32_l16384": {
+      "status": "OOM",
+      "concurrency": 32,
+      "context": 16384,
+      "reason": "working set 524288 tok > KV pool 129664 tok"
+    },
+    "c8_l32768": {
+      "status": "OOM",
+      "concurrency": 8,
+      "context": 32768,
+      "reason": "working set 262144 tok > KV pool 129664 tok"
+    },
+    "c16_l32768": {
+      "status": "OOM",
+      "concurrency": 16,
+      "context": 32768,
+      "reason": "working set 524288 tok > KV pool 129664 tok"
+    },
+    "c32_l32768": {
+      "status": "OOM",
+      "concurrency": 32,
+      "context": 32768,
+      "reason": "working set 1048576 tok > KV pool 129664 tok"
+    },
+    "c1_l2048": {
+      "status": "ok",
+      "tok_s": 30.7,
+      "elapsed_s": 16.7,
+      "completed": 2,
+      "failed": 0,
+      "out_tokens": 512,
+      "p50_lat_s": 8.6,
+      "p99_lat_s": 8.6,
+      "concurrency": 1,
+      "context": 2048
+    },
+    "c2_l2048": {
+      "status": "ok",
+      "tok_s": 30.6,
+      "elapsed_s": 33.4,
+      "completed": 4,
+      "failed": 0,
+      "out_tokens": 1024,
+      "p50_lat_s": 17.2,
+      "p99_lat_s": 17.2,
+      "concurrency": 2,
+      "context": 2048
+    },
+    "c4_l2048": {
+      "status": "ok",
+      "tok_s": 44.7,
+      "elapsed_s": 45.8,
+      "completed": 8,
+      "failed": 0,
+      "out_tokens": 2048,
+      "p50_lat_s": 23.5,
+      "p99_lat_s": 23.7,
+      "concurrency": 4,
+      "context": 2048
+    },
+    "c1_l4096": {
+      "status": "ok",
+      "tok_s": 23.4,
+      "elapsed_s": 21.9,
+      "completed": 2,
+      "failed": 0,
+      "out_tokens": 512,
+      "p50_lat_s": 12.5,
+      "p99_lat_s": 12.5,
+      "concurrency": 1,
+      "context": 4096
+    },
+    "c2_l4096": {
+      "status": "ok",
+      "tok_s": 22.0,
+      "elapsed_s": 46.6,
+      "completed": 4,
+      "failed": 0,
+      "out_tokens": 1024,
+      "p50_lat_s": 23.4,
+      "p99_lat_s": 24.8,
+      "concurrency": 2,
+      "context": 4096
+    },
+    "c4_l4096": {
+      "status": "ok",
+      "tok_s": 26.3,
+      "elapsed_s": 77.9,
+      "completed": 8,
+      "failed": 0,
+      "out_tokens": 2048,
+      "p50_lat_s": 39.2,
+      "p99_lat_s": 43.0,
+      "concurrency": 4,
+      "context": 4096
+    },
+    "c1_l8192": {
+      "status": "ok",
+      "tok_s": 14.5,
+      "elapsed_s": 35.3,
+      "completed": 2,
+      "failed": 0,
+      "out_tokens": 512,
+      "p50_lat_s": 22.6,
+      "p99_lat_s": 22.6,
+      "concurrency": 1,
+      "context": 8192
+    },
+    "c2_l8192": {
+      "status": "ok",
+      "tok_s": 12.7,
+      "elapsed_s": 80.4,
+      "completed": 4,
+      "failed": 0,
+      "out_tokens": 1024,
+      "p50_lat_s": 42.7,
+      "p99_lat_s": 46.1,
+      "concurrency": 2,
+      "context": 8192
+    },
+    "c4_l8192": {
+      "status": "ok",
+      "tok_s": 13.6,
+      "elapsed_s": 150.5,
+      "completed": 8,
+      "failed": 0,
+      "out_tokens": 2048,
+      "p50_lat_s": 78.8,
+      "p99_lat_s": 101.6,
+      "concurrency": 4,
+      "context": 8192
+    },
+    "c1_l16384": {
+      "status": "ok",
+      "tok_s": 7.3,
+      "elapsed_s": 70.1,
+      "completed": 2,
+      "failed": 0,
+      "out_tokens": 512,
+      "p50_lat_s": 50.8,
+      "p99_lat_s": 50.8,
+      "concurrency": 1,
+      "context": 16384
+    },
+    "c2_l16384": {
+      "status": "ok",
+      "tok_s": 5.9,
+      "elapsed_s": 174.6,
+      "completed": 4,
+      "failed": 0,
+      "out_tokens": 1024,
+      "p50_lat_s": 101.1,
+      "p99_lat_s": 103.4,
+      "concurrency": 2,
+      "context": 16384
+    },
+    "c4_l16384": {
+      "status": "ok",
+      "tok_s": 5.4,
+      "elapsed_s": 377.5,
+      "completed": 8,
+      "failed": 0,
+      "out_tokens": 2048,
+      "p50_lat_s": 196.3,
+      "p99_lat_s": 235.9,
+      "concurrency": 4,
+      "context": 16384
+    },
+    "c1_l32768": {
+      "status": "ok",
+      "tok_s": 2.9,
+      "elapsed_s": 174.6,
+      "completed": 2,
+      "failed": 0,
+      "out_tokens": 512,
+      "p50_lat_s": 141.9,
+      "p99_lat_s": 141.9,
+      "concurrency": 1,
+      "context": 32768
+    },
+    "c2_l32768": {
+      "status": "ok",
+      "tok_s": 2.2,
+      "elapsed_s": 462.1,
+      "completed": 4,
+      "failed": 0,
+      "out_tokens": 1024,
+      "p50_lat_s": 283.2,
+      "p99_lat_s": 285.1,
+      "concurrency": 2,
+      "context": 32768
+    },
+    "c4_l32768": {
+      "status": "OOM",
+      "concurrency": 4,
+      "context": 32768,
+      "reason": "working set 131072 tok > KV pool 129664 tok"
+    }
+  }
+}
